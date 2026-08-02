@@ -667,41 +667,52 @@ main { padding: 32px; max-width: 1440px; margin: 0 auto; }
 }
 .day-completion-row .label { font-weight: 600; margin-right: 4px; }
 .day-completion-row .pct { margin-left: auto; font-weight: 700; color: var(--navy); }
-.day-progress-bar {
-  position: relative;
-  height: 8px;
-  background: rgba(38, 55, 70, 0.10);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-top: 6px;
-}
-.day-progress-fill-ip {
-  position: absolute;
-  top: 0; left: 0; bottom: 0;
-  background: rgba(33, 114, 183, 0.55);
-  border-radius: 4px;
-  transition: width 0.4s ease;
-}
-.day-progress-fill-cp {
-  position: absolute;
-  top: 0; left: 0; bottom: 0;
-  background: #77BC1F;
-  border-radius: 4px;
-  transition: width 0.4s ease;
-}
-.day-progress-legend {
+.day-status-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-top: 6px;
-  font-size: 10.5px;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(203, 211, 234, 0.5);
+  font-size: 11px;
   color: var(--gray-body);
 }
-.day-progress-legend .pct {
-  margin-left: auto;
-  font-weight: 700;
-  color: var(--navy);
-  font-size: 12px;
+.day-status-row .label {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: var(--navy-mid);
+}
+.day-status-bubbles {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.day-status-bubble {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(38, 55, 70, 0.15);
+  box-shadow: 0 1px 2px rgba(38, 55, 70, 0.10);
+}
+.day-status-bubble.ns { background: var(--st-ns-border); opacity: 0.55; }
+.day-status-bubble.ip { background: var(--st-ip-border); }
+.day-status-bubble.rv { background: var(--st-rv-border); }
+.day-status-bubble.r1 { background: var(--st-r1-border); }
+.day-status-bubble.r2 { background: var(--st-r2-border); }
+.day-status-bubble.r3 { background: var(--st-r3-border); }
+.day-status-bubble.fr { background: var(--st-fr-border); }
+.day-status-bubble.cp { background: var(--st-cp-border); }
+.day-status-bubble.oh { background: var(--st-oh-border); }
+.day-status-bubble.cn { background: var(--st-cn-border); opacity: 0.55; }
+.day-status-overflow {
+  font-size: 10px;
+  color: var(--gray-body);
+  margin-left: 2px;
+  font-weight: 600;
 }
 .day-progress-empty {
   margin-top: 8px;

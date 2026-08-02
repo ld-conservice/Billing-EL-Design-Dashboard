@@ -201,7 +201,7 @@
       <div class="form-field">
         <label>Review Close (override)</label>
         <input type="date" id="f-revclose">
-        <div class="form-help" style="font-size:10.5px;color:var(--navy-mid);margin-top:3px;">Auto-computed as Design End (actual) + 5 business days. Set here to override.</div>
+        <div class="form-help" style="font-size:10.5px;color:var(--navy-mid);margin-top:3px;">Auto-computed as Design End (actual) + 7 business days (Design Team SOP). Set here to override.</div>
       </div>
       <div class="form-field full">
         <label>Google Drive Link (optional)</label>
@@ -614,33 +614,21 @@ function renderDayCard(day) {
   const ds = dayStatus(mins);
   const capCls = capacityClass(mins);
   const week = day <= 5 ? 1 : 2;
-  const counts = {ns:0, ip:0, rv:0, r1:0, r2:0, r3:0, fr:0, cp:0, oh:0, cn:0};
-  dayMods.forEach(m => counts[getStatus(m)]++);
   const totalCount = dayMods.length;
-  const cpCount = counts.cp;
-  const inFlightCount = counts.ip + counts.rv + counts.r1 + counts.r2 + counts.r3 + counts.fr;
-  const cpPct = totalCount ? Math.round((cpCount / totalCount) * 100) : 0;
-  const inFlightPct = totalCount ? Math.round((inFlightCount / totalCount) * 100) : 0;
-  const progressPct = totalCount ? Math.round(((cpCount + inFlightCount) / totalCount) * 100) : 0;
-  const pipsHtml = dayMods.slice(0, 12).map(m => {
+  const bubblesHtml = dayMods.slice(0, 14).map(m => {
     const s = getStatus(m);
-    return `<span class="day-card-completion-pip ${s}" title="${esc(m.n)} — ${statusLabel(s)}"></span>`;
+    return `<span class="day-status-bubble ${s}" title="${esc(m.n)} — ${statusLabel(s)}"></span>`;
   }).join('');
-  const overflow = dayMods.length > 12 ? `<span style="font-size:9px;color:var(--gray-body);margin-left:2px;">+${dayMods.length-12}</span>` : '';
+  const overflow = dayMods.length > 14 ? `<span class="day-status-overflow">+${dayMods.length-14}</span>` : '';
   const capIcon = mins >= DAY_BUDGET * 0.95 && mins <= DAY_BUDGET
     ? '<span class="cap-icon" title="Nearly full">✓</span>'
     : (mins > DAY_BUDGET ? '<span class="cap-icon over" title="Over budget">!</span>' : '');
-  // Progress bar shows cp (green) + inflight (blue) fill against total.
-  const progressBarHtml = totalCount === 0
+  const statusRowHtml = totalCount === 0
     ? '<div class="day-progress-empty">No content yet</div>'
     : `
-      <div class="day-progress-bar" title="${cpCount} complete · ${inFlightCount} in progress · ${counts.ns} not started">
-        <div class="day-progress-fill-ip" style="width: ${cpPct + inFlightPct}%;"></div>
-        <div class="day-progress-fill-cp" style="width: ${cpPct}%;"></div>
-      </div>
-      <div class="day-progress-legend">
-        <span>${pipsHtml}${overflow}</span>
-        <span class="pct">${progressPct}%</span>
+      <div class="day-status-row">
+        <span class="label">Status</span>
+        <span class="day-status-bubbles">${bubblesHtml}${overflow}</span>
       </div>
     `;
   return `
@@ -654,10 +642,7 @@ function renderDayCard(day) {
         <span><strong>${dayMods.length}</strong> module${dayMods.length===1?'':'s'}</span>
         <span><strong>${mins}</strong>m / ${DAY_BUDGET}m</span>
       </div>
-      <div class="day-completion-row">
-        <span class="label">Progress</span>
-      </div>
-      ${progressBarHtml}
+      ${statusRowHtml}
     </div>
   `;
 }
@@ -871,12 +856,13 @@ function renderTracker() {
       const sentStr = info.sent ? fmtDate(info.sent) : '—';
       const dueStr  = info.due  ? fmtDate(info.due)  : '—';
       // Urgency thermometer: MORE fill = MORE urgent (consumed / used up).
-      // Length scales against a 5-day SLA:
-      //   5+ days left → ~10% (small green nub, "fresh")
-      //   3 days left → ~40% amber
-      //   1 day left  → ~80% red
-      //   overdue    → 100% red pulsing
-      const SLA_SCALE = 5;
+      // Length scales against a 7-business-day SLA (Design Team SOP):
+      //   7+ days left → ~10% (small green nub, "fresh")
+      //   5 days left  → ~30% healthy
+      //   3 days left  → ~55% warning
+      //   1 day left   → ~85% critical
+      //   overdue      → 100% red pulsing
+      const SLA_SCALE = 7;
       const daysRemaining = Math.max(0, info.bizTotal - info.bizFilled);
       // Consumed = SLA - remaining, clamped 0..SLA
       const consumed = Math.max(0, Math.min(SLA_SCALE, SLA_SCALE - daysRemaining));
@@ -1022,10 +1008,10 @@ function renderDay() {
     const st = getStatus(m);
     const info = reviewInfo(m);
     return `
-    <div class="module-card st-${st} ${(st === 'rv' || st === 'fr') && info.delta !== null && info.delta < 0 ? 'rv-overdue' : ''} ${stageClass(m)} ${m._base ? '' : 'draft'}" data-id="${m.id}" ondragover="event.preventDefault(); this.classList.add('drag-over');" ondragleave="this.classList.remove('drag-over');" ondrop="commitReorder(event, '${m.id}', ${m.d});">
+    <div class="module-card st-${st} ${(st === 'rv' || st === 'fr') && info.delta !== null && info.delta < 0 ? 'rv-overdue' : ''} ${stageClass(m)}" data-id="${m.id}" ondragover="event.preventDefault(); this.classList.add('drag-over');" ondragleave="this.classList.remove('drag-over');" ondrop="commitReorder(event, '${m.id}', ${m.d});">
       <div class="module-card-header">
         <span class="drag-handle editor-only" draggable="true" ondragstart="dragSrcId='${m.id}'; event.dataTransfer.effectAllowed='move';" title="Drag to reorder">⋮⋮</span>
-        <div class="module-title">${esc(m.n)}${m._base ? '' : ' <span style="color:var(--draft-border);font-size:11px;font-weight:600;">DRAFT</span>'}</div>
+        <div class="module-title">${esc(m.n)}</div>
         <div class="module-meta">
           ${stageChip(m)}
           ${statusPill(m)}
@@ -1155,10 +1141,10 @@ function renderAll() {
 
   const rows = list.map(m => {
     return `
-    <div class="compact-row ${stageClass(m)} st-${getStatus(m)} ${m._base ? '' : 'draft'}" data-id="${m.id}" ondragover="event.preventDefault(); this.classList.add('drag-over');" ondragleave="this.classList.remove('drag-over');" ondrop="commitReorder(event, '${m.id}', ${m.d});">
+    <div class="compact-row ${stageClass(m)} st-${getStatus(m)}" data-id="${m.id}" ondragover="event.preventDefault(); this.classList.add('drag-over');" ondragleave="this.classList.remove('drag-over');" ondrop="commitReorder(event, '${m.id}', ${m.d});">
       <span class="drag-handle editor-only" draggable="true" ondragstart="dragSrcId='${m.id}'; event.dataTransfer.effectAllowed='move';">⋮⋮</span>
       <span class="cr-day">Day ${m.d}</span>
-      <span class="cr-title" title="${esc(m.n)}">${esc(m.n)}${m._base ? '' : ' <span style="color:var(--draft-border);">◆</span>'}</span>
+      <span class="cr-title" title="${esc(m.n)}">${esc(m.n)}</span>
       ${stageChip(m)}
       ${statusPillClickable(m)}
       <span class="cr-ct">${esc(m.c)}</span>
@@ -1221,7 +1207,7 @@ function reviewInfo(m) {
   let sent = sentSource ? new Date(sentSource + 'T12:00:00') : null;
   let due = null;
   if (m.revclose) due = new Date(m.revclose + 'T12:00:00');
-  else if (sentSource) due = addBusinessDays(sentSource, 5);
+  else if (sentSource) due = addBusinessDays(sentSource, 7);
   // Defensive fallback: any review-state module (rv or fr) with no sent date
   // still needs a review window. Treat today as sent so the bar renders.
   const st = getStatus(m);
@@ -1229,7 +1215,7 @@ function reviewInfo(m) {
     const t = new Date();
     const iso = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
     sent = new Date(iso + 'T12:00:00');
-    if (!due) due = addBusinessDays(iso, 5);
+    if (!due) due = addBusinessDays(iso, 7);
   }
   const delta = due ? daysUntil(due) : null;
   const now = new Date(); now.setHours(12,0,0,0);
