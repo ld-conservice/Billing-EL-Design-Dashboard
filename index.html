@@ -811,7 +811,7 @@ function renderTracker() {
   // Includes both In Review (rv) and Final Review (fr) modules, since both
   // are actively sitting with stakeholders and need the same visibility.
   const reviewMods = modules
-    .filter(m => { const s = getStatus(m); return s === 'rv' || s === 'fr'; })
+    .filter(m => isInReview(getStatus(m)))
     .map(m => ({m, info: reviewInfo(m)}))
     .sort((a, b) => {
       const aOver = a.info.delta !== null && a.info.delta < 0;
@@ -837,15 +837,15 @@ function renderTracker() {
       daysBig = '—';
       daysLabel = 'no deadline set';
     } else if (isOverdue) {
-      daysBig = Math.abs(info.delta);
-      daysLabel = `day${Math.abs(info.delta) === 1 ? '' : 's'} overdue`;
+      daysBig = info.bizOverdue;
+      daysLabel = `business day${info.bizOverdue === 1 ? '' : 's'} overdue`;
       daysLabelCls = 'overdue';
     } else if (isLocked) {
       daysBig = 0;
       daysLabel = 'closes today';
     } else {
-      daysBig = info.delta;
-      daysLabel = `day${info.delta === 1 ? '' : 's'} left`;
+      daysBig = info.bizRemaining;
+      daysLabel = `business day${info.bizRemaining === 1 ? '' : 's'} left`;
     }
     const isFinal = getStatus(m) === 'fr';
     const icon = isOverdue ? '⚠' : (isNoDate ? '?' : (isLocked ? '🔒' : (isFinal ? '🚨' : '🚀')));
@@ -1008,7 +1008,7 @@ function renderDay() {
     const st = getStatus(m);
     const info = reviewInfo(m);
     return `
-    <div class="module-card st-${st} ${(st === 'rv' || st === 'fr') && info.delta !== null && info.delta < 0 ? 'rv-overdue' : ''} ${stageClass(m)}" data-id="${m.id}" ondragover="event.preventDefault(); this.classList.add('drag-over');" ondragleave="this.classList.remove('drag-over');" ondrop="commitReorder(event, '${m.id}', ${m.d});">
+    <div class="module-card st-${st} ${isInReview(st) && info.delta !== null && info.delta < 0 ? 'rv-overdue' : ''} ${stageClass(m)}" data-id="${m.id}" ondragover="event.preventDefault(); this.classList.add('drag-over');" ondragleave="this.classList.remove('drag-over');" ondrop="commitReorder(event, '${m.id}', ${m.d});">
       <div class="module-card-header">
         <span class="drag-handle editor-only" draggable="true" ondragstart="dragSrcId='${m.id}'; event.dataTransfer.effectAllowed='move';" title="Drag to reorder">⋮⋮</span>
         <div class="module-title">${esc(m.n)}</div>
@@ -1023,7 +1023,7 @@ function renderDay() {
           </div>
         </div>
       </div>
-      ${(st === 'rv' || st === 'fr') ? reviewLiveBanner(m) : ''}
+      ${isInReview(st) ? reviewLiveBanner(m) : ''}
       <div class="module-body">
         ${m.o ? `<div class="module-field"><strong>Learner Outcome</strong><div class="field-content">${esc(m.o)}</div></div>` : ''}
         ${m.dec ? `<div class="module-field"><strong>Decisions to Make</strong><div class="field-content">${esc(m.dec)}</div></div>` : ''}
@@ -1200,6 +1200,13 @@ function businessDaysBetween(start, end) {
   }
   return count;
 }
+// A module is "in review with stakeholders" for any of these statuses.
+// All revision rounds (r1, r2, r3) count as active review — they came back
+// from stakeholders with feedback and are now back with them.
+function isInReview(status) {
+  return status === 'rv' || status === 'r1' || status === 'r2' || status === 'r3' || status === 'fr';
+}
+
 function reviewInfo(m) {
   // Sent date = when design actually finished (m.dendActual).
   // Falls back to legacy m.dend for older records that don't have dendActual yet.
@@ -1208,10 +1215,10 @@ function reviewInfo(m) {
   let due = null;
   if (m.revclose) due = new Date(m.revclose + 'T12:00:00');
   else if (sentSource) due = addBusinessDays(sentSource, 7);
-  // Defensive fallback: any review-state module (rv or fr) with no sent date
-  // still needs a review window. Treat today as sent so the bar renders.
+  // Defensive fallback: any review-family module with no sent date still
+  // needs a review window. Treat today as sent so the bar renders.
   const st = getStatus(m);
-  if (!sent && (st === 'rv' || st === 'fr')) {
+  if (!sent && isInReview(st)) {
     const t = new Date();
     const iso = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
     sent = new Date(iso + 'T12:00:00');
@@ -1223,7 +1230,8 @@ function reviewInfo(m) {
   const bizElapsed = sent && now >= sent ? businessDaysBetween(sent, now) : 0;
   const bizFilled  = Math.min(bizElapsed, bizTotal);
   const bizOverdue = Math.max(0, bizElapsed - bizTotal);
-  return {sent, due, delta, bizTotal, bizFilled, bizOverdue, override: !!m.revclose};
+  const bizRemaining = Math.max(0, bizTotal - bizFilled);
+  return {sent, due, delta, bizTotal, bizFilled, bizOverdue, bizRemaining, override: !!m.revclose};
 }
 function reviewBadge(m) {
   const st = getStatus(m);
@@ -1232,16 +1240,17 @@ function reviewBadge(m) {
     if (completedOn) return `<span class="review-badge rb-done">✓ ${fmtDate(completedOn)}</span>`;
     return '';
   }
-  if (st !== 'rv' && st !== 'fr') return '';
+  if (!isInReview(st)) return '';
   const info = reviewInfo(m);
   const finalTag = st === 'fr' ? 'FINAL · ' : '';
   if (!info.due) return `<span class="review-badge rb-scheduled">${finalTag}no date</span>`;
   if (info.delta === null) return '';
-  if (info.delta < 0) return `<span class="review-badge rb-overdue">${finalTag}${Math.abs(info.delta)}d overdue</span>`;
+  if (info.delta < 0) return `<span class="review-badge rb-overdue">${finalTag}${info.bizOverdue}d overdue</span>`;
   if (info.delta === 0) return `<span class="review-badge rb-locked">🔒 ${finalTag}closes today</span>`;
-  if (info.delta === 1) return `<span class="review-badge rb-soon">${finalTag}due tmrw</span>`;
-  if (info.delta <= 3) return `<span class="review-badge rb-soon">${finalTag}${info.delta}d left</span>`;
-  return `<span class="review-badge rb-scheduled">${finalTag}${info.delta}d left</span>`;
+  const bizLeft = info.bizRemaining;
+  if (bizLeft === 1) return `<span class="review-badge rb-soon">${finalTag}1d left</span>`;
+  if (bizLeft <= 3) return `<span class="review-badge rb-soon">${finalTag}${bizLeft}d left</span>`;
+  return `<span class="review-badge rb-scheduled">${finalTag}${bizLeft}d left</span>`;
 }
 function reviewCornerRibbon(m) {
   const info = reviewInfo(m);
@@ -1259,17 +1268,19 @@ function reviewLiveBanner(m) {
   const day = info.due ? info.due.getDate() : '?';
   const month = info.due ? info.due.toLocaleDateString('en-US', {month: 'short'}) : '';
   const dow = info.due ? info.due.toLocaleDateString('en-US', {weekday: 'short'}) : '';
-  const chipText = info.delta === null ? 'NO DATE' : (isOverdue ? `${Math.abs(info.delta)}D LATE` : (isLocked ? 'LOCKED' : `${info.delta}D LEFT`));
+  // Use business days for all countdown copy since the review window itself is measured in business days.
+  const bizLeft = info.bizRemaining;
+  const chipText = info.delta === null ? 'NO DATE' : (isOverdue ? `${info.bizOverdue}D LATE` : (isLocked ? 'LOCKED' : `${bizLeft}D LEFT`));
   const calCls = info.delta === null ? 'no-date active' : (isOverdue ? 'overdue' : (isLocked ? 'locked' : 'active'));
   const cdCls  = isOverdue ? 'overdue' : (isLocked ? 'locked' : '');
   const headline = info.delta === null ? 'AWAITING REVIEW' : (isOverdue ? 'REVIEW WINDOW CLOSED' : (isLocked ? 'REVIEW WINDOW CLOSES TODAY' : 'REVIEW IN PROGRESS'));
   const detail = info.delta === null
     ? 'This module is with stakeholders but no due date has been set.'
     : (isOverdue
-        ? `Was due <strong>${fmtDate(info.due)}</strong> — ${Math.abs(info.delta)} business day${Math.abs(info.delta) === 1 ? '' : 's'} ago. Follow up with reviewers.`
+        ? `Was due <strong>${fmtDate(info.due)}</strong> — ${info.bizOverdue} business day${info.bizOverdue === 1 ? '' : 's'} ago. Follow up with reviewers.`
         : (isLocked
             ? `Final day of the review window (<strong>${fmtDate(info.due)}</strong>). Reviewers must return feedback today.`
-            : `Reviewers have until <strong>${fmtDate(info.due)}</strong>${info.delta > 0 ? ` (${info.delta} business day${info.delta === 1 ? '' : 's'} left)` : ''}.`));
+            : `Reviewers have until <strong>${fmtDate(info.due)}</strong>${bizLeft > 0 ? ` (${bizLeft} business day${bizLeft === 1 ? '' : 's'} left)` : ''}.`));
   const headlineIcon = isLocked ? '🔒' : '👁️';
   return `
     <div class="review-countdown ${cdCls}">
