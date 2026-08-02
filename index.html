@@ -47,29 +47,31 @@
   <div id="view-day" class="view">
     <div class="day-header">
       <h2>Content Details</h2>
-      <select id="daySelect" class="day-select" onchange="renderDay()">
-        <option value="1">Day 1</option>
-        <option value="2">Day 2</option>
-        <option value="3" selected>Day 3</option>
-        <option value="4">Day 4</option>
-        <option value="5">Day 5</option>
-        <option value="6">Day 6</option>
-        <option value="7">Day 7</option>
-        <option value="8">Day 8</option>
-        <option value="9">Day 9</option>
-        <option value="10">Day 10</option>
-      </select>
-      <select id="dayStageFilter" class="day-select" onchange="renderDay()" title="Filter by Lifecycle">
-        <option value="">Filter by Lifecycle</option>
-        <option value="collect">01 · Collect Data</option>
-        <option value="prep">02 · Prep Work</option>
-        <option value="calc">03 · Calculate Charges</option>
-        <option value="quality">04 · Quality Check</option>
-        <option value="bill">05 · Bill Residents</option>
-        <option value="recovery">06 · Recovery</option>
-        <option value="comms">Customer Comms</option>
-        <option value="__none__">— None / Foundational</option>
-      </select>
+      <div class="day-header-selects">
+        <select id="daySelect" class="day-select" onchange="renderDay()">
+          <option value="1">Day 1</option>
+          <option value="2">Day 2</option>
+          <option value="3">Day 3</option>
+          <option value="4">Day 4</option>
+          <option value="5">Day 5</option>
+          <option value="6">Day 6</option>
+          <option value="7">Day 7</option>
+          <option value="8">Day 8</option>
+          <option value="9">Day 9</option>
+          <option value="10">Day 10</option>
+        </select>
+        <select id="dayStageFilter" class="day-select" onchange="renderDay()" title="Filter by Lifecycle">
+          <option value="">Filter by Lifecycle</option>
+          <option value="collect">01 · Collect Data</option>
+          <option value="prep">02 · Prep Work</option>
+          <option value="calc">03 · Calculate Charges</option>
+          <option value="quality">04 · Quality Check</option>
+          <option value="bill">05 · Bill Residents</option>
+          <option value="recovery">06 · Recovery</option>
+          <option value="comms">Customer Comms</option>
+          <option value="__none__">— None / Foundational</option>
+        </select>
+      </div>
     </div>
     <div id="dayContent"></div>
   </div>
@@ -192,9 +194,14 @@
         <input type="date" id="f-dend">
       </div>
       <div class="form-field">
+        <label>Design End (actual)</label>
+        <input type="date" id="f-dendActual">
+        <div class="form-help" style="font-size:10.5px;color:var(--navy-mid);margin-top:3px;">Set the day design actually finished. This becomes the review "Date Sent" and starts the review window.</div>
+      </div>
+      <div class="form-field">
         <label>Review Close (override)</label>
         <input type="date" id="f-revclose">
-        <div class="form-help" style="font-size:10.5px;color:var(--navy-mid);margin-top:3px;">Auto-computed as Design End + 3 business days. Set here to override.</div>
+        <div class="form-help" style="font-size:10.5px;color:var(--navy-mid);margin-top:3px;">Auto-computed as Design End (actual) + 5 business days. Set here to override.</div>
       </div>
       <div class="form-field full">
         <label>Google Drive Link (optional)</label>
@@ -392,7 +399,7 @@ function orderedForDay(day) {
 }
 
 function orderedAll() {
-  const days = [3,4,5,6,7,8,9,10];
+  const days = [1,2,3,4,5,6,7,8,9,10];
   return days.flatMap(d => orderedForDay(d));
 }
 
@@ -562,7 +569,7 @@ function renderOverview() {
       <div class="kpi-sub">${cpPct}% of program</div>
     </div>
     <div class="kpi ${ipRv > 0 ? 'warn' : ''}">
-      <div class="kpi-label">In Flight</div>
+      <div class="kpi-label">In Progress</div>
       <div class="kpi-value">${ipRv}</div>
       <div class="kpi-sub">${statusCounts.ip} dev · ${statusCounts.rv} review</div>
     </div>
@@ -576,7 +583,7 @@ function renderOverview() {
     <div class="week-section week-1 ${w1Collapsed ? 'collapsed' : ''}">
       <div class="week-section-header" onclick="toggleWeekSection(1)">
         <span class="rail"></span>
-        <span>Week 1 · Days 3–5</span>
+        <span>Week 1 · Days 1–5</span>
         <span class="ws-caret">▾</span>
       </div>
       <div class="day-grid">${w1}</div>
@@ -611,7 +618,10 @@ function renderDayCard(day) {
   dayMods.forEach(m => counts[getStatus(m)]++);
   const totalCount = dayMods.length;
   const cpCount = counts.cp;
+  const inFlightCount = counts.ip + counts.rv + counts.r1 + counts.r2 + counts.r3 + counts.fr;
   const cpPct = totalCount ? Math.round((cpCount / totalCount) * 100) : 0;
+  const inFlightPct = totalCount ? Math.round((inFlightCount / totalCount) * 100) : 0;
+  const progressPct = totalCount ? Math.round(((cpCount + inFlightCount) / totalCount) * 100) : 0;
   const pipsHtml = dayMods.slice(0, 12).map(m => {
     const s = getStatus(m);
     return `<span class="day-card-completion-pip ${s}" title="${esc(m.n)} — ${statusLabel(s)}"></span>`;
@@ -620,6 +630,19 @@ function renderDayCard(day) {
   const capIcon = mins >= DAY_BUDGET * 0.95 && mins <= DAY_BUDGET
     ? '<span class="cap-icon" title="Nearly full">✓</span>'
     : (mins > DAY_BUDGET ? '<span class="cap-icon over" title="Over budget">!</span>' : '');
+  // Progress bar shows cp (green) + inflight (blue) fill against total.
+  const progressBarHtml = totalCount === 0
+    ? '<div class="day-progress-empty">No content yet</div>'
+    : `
+      <div class="day-progress-bar" title="${cpCount} complete · ${inFlightCount} in progress · ${counts.ns} not started">
+        <div class="day-progress-fill-ip" style="width: ${cpPct + inFlightPct}%;"></div>
+        <div class="day-progress-fill-cp" style="width: ${cpPct}%;"></div>
+      </div>
+      <div class="day-progress-legend">
+        <span>${pipsHtml}${overflow}</span>
+        <span class="pct">${progressPct}%</span>
+      </div>
+    `;
   return `
     <div class="day-card week-${week}" onclick="goToDay(${day})">
       <div class="day-card-header">
@@ -628,14 +651,13 @@ function renderDayCard(day) {
       </div>
       <div class="day-card-bar"><div class="day-card-bar-fill ${capCls}" style="width: ${pct}%"></div></div>
       <div class="day-card-meta">
-        <span><strong>${dayMods.length}</strong> modules</span>
+        <span><strong>${dayMods.length}</strong> module${dayMods.length===1?'':'s'}</span>
         <span><strong>${mins}</strong>m / ${DAY_BUDGET}m</span>
       </div>
       <div class="day-completion-row">
-        <span class="label">Progress:</span>
-        ${pipsHtml}${overflow}
-        <span class="pct">${cpPct}%</span>
+        <span class="label">Progress</span>
       </div>
+      ${progressBarHtml}
     </div>
   `;
 }
@@ -704,15 +726,17 @@ function renderTracker() {
   const days = [1,2,3,4,5,6,7,8,9,10];
   const perDay = days.map(d => {
     const dayMods = modules.filter(m => m.d === d);
-    const total = dayMods.length || 1;
+    const total = dayMods.length;
+    const divisor = total || 1; // guard against divide-by-zero in percentages only
     const counts = {ns:0, ip:0, rv:0, r1:0, r2:0, r3:0, fr:0, cp:0, oh:0, cn:0};
     dayMods.forEach(m => counts[getStatus(m)]++);
     const inFlight = counts.ip + counts.rv + counts.r1 + counts.r2 + counts.r3 + counts.fr;
-    const cpPct = (counts.cp / total) * 100;
-    const ipRvPct = (inFlight / total) * 100;
+    const cpPct = (counts.cp / divisor) * 100;
+    const ipRvPct = (inFlight / divisor) * 100;
     let cls = 'pending', pill = 'pending', pillLabel = 'Not Started';
-    if (counts.cp === total) { cls = 'done'; pill = 'done'; pillLabel = 'Complete'; }
+    if (total > 0 && counts.cp === total) { cls = 'done'; pill = 'done'; pillLabel = 'Complete'; }
     else if (counts.cp + inFlight > 0) { cls = 'active'; pill = 'active'; pillLabel = 'In Progress'; }
+    else if (total === 0) { pillLabel = 'Empty'; }
     return {d, total, counts, cpPct, ipRvPct, cls, pill, pillLabel};
   });
 
@@ -790,7 +814,7 @@ function renderTracker() {
           <div class="route-day-progress-cp" style="width: ${pd.cpPct}%;"></div>
         </div>
         <div class="route-day-meta">
-          <span>${pd.total} module${pd.total===1?'':'s'} · ${pd.counts.cp} done</span>
+          <span>${pd.total === 0 ? 'No modules yet' : pd.total + ' module' + (pd.total===1?'':'s') + ' · ' + pd.counts.cp + ' done'}</span>
           <span class="pct">${Math.round(pd.cpPct)}%</span>
         </div>
         ${modsHtml}
@@ -934,7 +958,7 @@ function renderTracker() {
           <div class="route-metric-sub">${overallCpRounded}% delivered</div>
         </div>
         <div class="route-metric">
-          <div class="route-metric-label">In Flight</div>
+          <div class="route-metric-label">In Progress</div>
           <div class="route-metric-value ip">${overallInFlight}</div>
           <div class="route-metric-sub">${overallCounts.ip} dev · ${overallCounts.rv} review · ${overallCounts.r1 + overallCounts.r2 + overallCounts.r3} revising · ${overallCounts.fr} final</div>
         </div>
@@ -961,21 +985,6 @@ function renderTracker() {
         ${reviewMods.length ? `<div class="handoff-list">${handoffRows}</div>` : handoffEmpty}
       </div>
 
-      <div class="route-progress-wrap">
-        <div class="route-progress-label">
-          <span>Overall Program Progress</span>
-          <span class="big">${overallProgressPct}%</span>
-        </div>
-        <div class="route-progress-track">
-          <div class="route-progress-fill-ip" style="width: ${overallCpPct + overallIpRvPct}%"></div>
-          <div class="route-progress-fill-cp" style="width: ${overallCpPct}%"></div>
-        </div>
-        <div class="route-progress-legend">
-          <div class="route-progress-legend-item"><span class="route-progress-legend-swatch" style="background:#77BC1F;"></span>Complete</div>
-          <div class="route-progress-legend-item"><span class="route-progress-legend-swatch" style="background:rgba(33,114,183,0.65);"></span>In Progress</div>
-          <div class="route-progress-legend-item"><span class="route-progress-legend-swatch" style="background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.20);"></span>Not Started</div>
-        </div>
-      </div>
       <div class="route-days-heading">
         Day-by-Day
         <span class="hint">Click any day to expand · click again to collapse</span>
@@ -1206,10 +1215,13 @@ function businessDaysBetween(start, end) {
   return count;
 }
 function reviewInfo(m) {
-  let sent = m.dend ? new Date(m.dend + 'T12:00:00') : null;
+  // Sent date = when design actually finished (m.dendActual).
+  // Falls back to legacy m.dend for older records that don't have dendActual yet.
+  const sentSource = m.dendActual || m.dend;
+  let sent = sentSource ? new Date(sentSource + 'T12:00:00') : null;
   let due = null;
   if (m.revclose) due = new Date(m.revclose + 'T12:00:00');
-  else if (m.dend) due = addBusinessDays(m.dend, 5);
+  else if (sentSource) due = addBusinessDays(sentSource, 5);
   // Defensive fallback: any review-state module (rv or fr) with no sent date
   // still needs a review window. Treat today as sent so the bar renders.
   const st = getStatus(m);
@@ -1230,7 +1242,8 @@ function reviewInfo(m) {
 function reviewBadge(m) {
   const st = getStatus(m);
   if (st === 'cp') {
-    if (m.dend) return `<span class="review-badge rb-done">✓ ${fmtDate(m.dend)}</span>`;
+    const completedOn = m.dendActual || m.dend;
+    if (completedOn) return `<span class="review-badge rb-done">✓ ${fmtDate(completedOn)}</span>`;
     return '';
   }
   if (st !== 'rv' && st !== 'fr') return '';
@@ -1289,9 +1302,6 @@ function reviewLiveBanner(m) {
       <div class="rc-body">
         <div class="rc-headline"><span class="rc-eye">${headlineIcon}</span>${headline}${info.override ? '<span class="rc-override">custom date</span>' : ''}</div>
         <div class="rc-detail">${detail}</div>
-        <div class="rc-actions">
-          <button class="rc-mark-complete" onclick="event.stopPropagation(); markReviewComplete('${m.id}')">✔ Mark Review Complete</button>
-        </div>
       </div>
     </div>
   `;
@@ -1498,13 +1508,14 @@ function openAddModal() {
   document.getElementById('modalSub').textContent = 'Add a new module to the program.';
   document.getElementById('modalDeleteBtn').style.display = 'none';
   document.getElementById('f-name').value = '';
-  document.getElementById('f-day').value = '3';
+  document.getElementById('f-day').value = '1';
   document.getElementById('f-mins').value = '30';
   document.getElementById('f-ct').value = 'ILT';
   document.getElementById('f-stage').value = '';
   document.getElementById('f-status').value = 'ns';
   document.getElementById('f-dstart').value = '';
   document.getElementById('f-dend').value = '';
+  document.getElementById('f-dendActual').value = '';
   document.getElementById('f-revclose').value = '';
   document.getElementById('f-link').value = '';
   document.getElementById('f-outcome').value = '';
@@ -1531,6 +1542,7 @@ function openEditModal(id) {
   document.getElementById('f-status').value = getStatus(m);
   document.getElementById('f-dstart').value = m.dstart || '';
   document.getElementById('f-dend').value = m.dend || '';
+  document.getElementById('f-dendActual').value = m.dendActual || '';
   document.getElementById('f-revclose').value = m.revclose || '';
   document.getElementById('f-link').value = m.link || '';
   document.getElementById('f-outcome').value = m.o || '';
@@ -1553,6 +1565,7 @@ function collectForm() {
     st: document.getElementById('f-status').value,
     dstart: document.getElementById('f-dstart').value || '',
     dend: document.getElementById('f-dend').value || '',
+    dendActual: document.getElementById('f-dendActual').value || '',
     revclose: document.getElementById('f-revclose').value || '',
     link: document.getElementById('f-link').value.trim(),
     o: document.getElementById('f-outcome').value.trim(),

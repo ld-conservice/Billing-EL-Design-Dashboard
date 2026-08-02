@@ -667,6 +667,53 @@ main { padding: 32px; max-width: 1440px; margin: 0 auto; }
 }
 .day-completion-row .label { font-weight: 600; margin-right: 4px; }
 .day-completion-row .pct { margin-left: auto; font-weight: 700; color: var(--navy); }
+.day-progress-bar {
+  position: relative;
+  height: 8px;
+  background: rgba(38, 55, 70, 0.10);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.day-progress-fill-ip {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  background: rgba(33, 114, 183, 0.55);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.day-progress-fill-cp {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  background: #77BC1F;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.day-progress-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: var(--gray-body);
+}
+.day-progress-legend .pct {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--navy);
+  font-size: 12px;
+}
+.day-progress-empty {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(38, 55, 70, 0.05);
+  border: 1px dashed rgba(38, 55, 70, 0.20);
+  text-align: center;
+  font-size: 11px;
+  color: var(--gray-body);
+  font-style: italic;
+}
 
 /* ===== DELIVERY ROUTE (PROGRAM TRACKER) VIEW ===== */
 .route-wrap {
@@ -2204,6 +2251,12 @@ main { padding: 32px; max-width: 1440px; margin: 0 auto; }
   color: var(--navy);
   font-size: 24px;
   letter-spacing: -0.3px;
+}
+.day-header-selects {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 .day-select {
   padding: 10px 16px;
