@@ -2869,7 +2869,7 @@ body.stakeholder .comments-section { display: block; }
   border-radius: 10px;
   padding: 10px 14px;
   display: grid;
-  grid-template-columns: 16px 52px minmax(0, 1fr) 148px 118px 86px 52px 84px 62px 34px;
+  grid-template-columns: 16px 52px minmax(0, 1fr) 148px 118px 128px 60px 110px 40px 34px;
   gap: 10px;
   align-items: center;
   font-size: 12.5px;
@@ -2903,7 +2903,7 @@ body.stakeholder .comments-section { display: block; }
 .compact-row .icon-btn { justify-self: center; }
 .all-content-header {
   display: grid;
-  grid-template-columns: 16px 52px minmax(0, 1fr) 148px 118px 86px 52px 84px 62px 34px;
+  grid-template-columns: 16px 52px minmax(0, 1fr) 148px 118px 128px 60px 110px 40px 34px;
   gap: 10px;
   padding: 6px 14px 4px;
   font-size: 10.5px;
