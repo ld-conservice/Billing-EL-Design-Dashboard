@@ -1200,11 +1200,12 @@ function businessDaysBetween(start, end) {
   }
   return count;
 }
-// A module is "in review with stakeholders" for any of these statuses.
-// All revision rounds (r1, r2, r3) count as active review — they came back
-// from stakeholders with feedback and are now back with them.
+// A module is "in review with stakeholders" only when status is In Review (rv)
+// or Final Review (fr). Revisions rounds (r1, r2, r3) mean the module is back
+// with the designer for changes, NOT sitting with reviewers, so those statuses
+// should not trigger the review banner, ribbon, badge, or Handoff listing.
 function isInReview(status) {
-  return status === 'rv' || status === 'r1' || status === 'r2' || status === 'r3' || status === 'fr';
+  return status === 'rv' || status === 'fr';
 }
 
 function reviewInfo(m) {
