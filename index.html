@@ -43,12 +43,23 @@
     <div id="weekContent"></div>
   </div>
 
-  <!-- DAY (Content Details) -->
+  <!-- DAY (Content Details — now grouped by Lifecycle Stage) -->
   <div id="view-day" class="view">
     <div class="day-header">
       <h2>Content Details</h2>
       <div class="day-header-selects">
-        <select id="daySelect" class="day-select" onchange="renderDay()">
+        <select id="dayStageSelect" class="day-select" onchange="renderDay()" title="Choose a lifecycle stage">
+          <option value="collect">01 · Collect Data</option>
+          <option value="prep">02 · Prep Work</option>
+          <option value="calc">03 · Calculate Charges</option>
+          <option value="quality">04 · Quality Check</option>
+          <option value="bill">05 · Bill Residents</option>
+          <option value="recovery">06 · Recovery</option>
+          <option value="comms">Customer Comms</option>
+          <option value="__none__">Foundational / No Stage</option>
+        </select>
+        <select id="daySelect" class="day-select" onchange="renderDay()" title="Optional: filter by working day placement">
+          <option value="">All working days</option>
           <option value="1">Day 1</option>
           <option value="2">Day 2</option>
           <option value="3">Day 3</option>
@@ -59,17 +70,6 @@
           <option value="8">Day 8</option>
           <option value="9">Day 9</option>
           <option value="10">Day 10</option>
-        </select>
-        <select id="dayStageFilter" class="day-select" onchange="renderDay()" title="Filter by Lifecycle">
-          <option value="">Filter by Lifecycle</option>
-          <option value="collect">01 · Collect Data</option>
-          <option value="prep">02 · Prep Work</option>
-          <option value="calc">03 · Calculate Charges</option>
-          <option value="quality">04 · Quality Check</option>
-          <option value="bill">05 · Bill Residents</option>
-          <option value="recovery">06 · Recovery</option>
-          <option value="comms">Customer Comms</option>
-          <option value="__none__">— None / Foundational</option>
         </select>
       </div>
     </div>
@@ -500,6 +500,11 @@ function cycleStatus(id) {
   const next = cycle[cur] || 'ns';
   overlays.edits[id] = overlays.edits[id] || {};
   overlays.edits[id].st = next;
+  // Keep revLevel in sync when manually moving into a revision status so the
+  // auto-flip system knows which round we're on next time.
+  if (next === 'r1') overlays.edits[id].revLevel = Math.max(1, m.revLevel || 0);
+  else if (next === 'r2') overlays.edits[id].revLevel = Math.max(2, m.revLevel || 0);
+  else if (next === 'r3') overlays.edits[id].revLevel = Math.max(3, m.revLevel || 0);
   // When flipping into any stakeholder-facing review state (rv or fr), stamp
   // today's date as "sent" so the review window auto-populates
   // (sent + 5 biz days = due). fr resets the window since it's a new review round.
@@ -521,6 +526,48 @@ function cycleStatus(id) {
   const activeTab = document.querySelector('.tab.active').dataset.view;
   showView(activeTab);
   showToast(`Status → ${statusLabel(next)}`);
+}
+
+// ===== AUTO-FLIP: STAKEHOLDER REVIEW WINDOW EXPIRED =====
+// When a module's stakeholder review window (rv or fr) closes at EOD, it
+// auto-flips back into the design queue at the next revision level.
+// revLevel tracks how many revision rounds a module has already touched
+// (0 = never revised, 1 = touched r1, 2 = touched r2, 3 = touched r3/capped).
+// On flip, revLevel increments (capped at 3) and status becomes r{revLevel}.
+// Timestamp of the flip is stored on the overlay so the "With Design" widget
+// can surface it as "just returned from review."
+function runAutoFlip() {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let flipped = 0;
+  modules.forEach(m => {
+    const st = getStatus(m);
+    if (st !== 'rv' && st !== 'fr') return;
+    const info = reviewInfo(m);
+    if (!info.due) return;
+    // Anything whose due date is BEFORE today (i.e. due date already ended
+    // at midnight last night) is expired and flips.
+    const dueEnd = new Date(info.due.getFullYear(), info.due.getMonth(), info.due.getDate() + 1);
+    if (now < dueEnd) return;
+    // Bump revision level, cap at 3.
+    const currentLevel = m.revLevel || 0;
+    const nextLevel = Math.min(currentLevel + 1, 3);
+    const nextStatus = 'r' + nextLevel;
+    overlays.edits[m.id] = overlays.edits[m.id] || {};
+    overlays.edits[m.id].st = nextStatus;
+    overlays.edits[m.id].revLevel = nextLevel;
+    // Stamp the flip so we can show "returned" recency badge.
+    overlays.edits[m.id].returnedAt = todayStart.getFullYear() + '-' +
+      String(todayStart.getMonth()+1).padStart(2,'0') + '-' +
+      String(todayStart.getDate()).padStart(2,'0');
+    flipped++;
+  });
+  if (flipped > 0) {
+    saveOverlays();
+    rebuildModules();
+    console.log('[auto-flip]', flipped, 'module(s) returned to design queue');
+  }
+  return flipped;
 }
 
 function capacityClass(mins) {
@@ -669,11 +716,23 @@ function renderWeek() {
 }
 
 function goToDay(day) {
+  // Content Details is now stage-primary. Opening a day sets the day filter
+  // and picks the first stage that has content on that day, so the view
+  // opens on something meaningful rather than an empty selection.
+  const dayMods = modules.filter(m => m.d === day);
+  const stagesOnDay = [...new Set(dayMods.map(m => stageKey(m) || '__none__'))];
+  const stageOrder = ['collect','prep','calc','quality','bill','recovery','comms','__none__'];
+  const firstStage = stageOrder.find(s => stagesOnDay.includes(s)) || 'collect';
+  document.getElementById('dayStageSelect').value = firstStage;
   document.getElementById('daySelect').value = day;
   showView('day');
 }
 function goToModule(id, day) {
-  document.getElementById('daySelect').value = day;
+  const m = modules.find(x => x.id === id);
+  const stage = m ? (stageKey(m) || '__none__') : 'collect';
+  document.getElementById('dayStageSelect').value = stage;
+  // Clear the day filter so the module is visible in its stage regardless of day.
+  document.getElementById('daySelect').value = '';
   showView('day');
   setTimeout(() => {
     const el = document.querySelector(`.module-card[data-id="${id}"]`);
@@ -688,10 +747,16 @@ function goToModule(id, day) {
 
 // ===== ROUTE (TRACKER) =====
 let routeOpenDays = new Set();
+let routeOpenStages = new Set();
 
 function toggleRouteDay(day) {
   if (routeOpenDays.has(day)) routeOpenDays.delete(day);
   else routeOpenDays.add(day);
+  renderTracker();
+}
+function toggleRouteStage(sk) {
+  if (routeOpenStages.has(sk)) routeOpenStages.delete(sk);
+  else routeOpenStages.add(sk);
   renderTracker();
 }
 
@@ -764,48 +829,77 @@ function renderTracker() {
     `;
   }).join('');
 
-  const daysHtml = perDay.map(pd => {
-    const isOpen = routeOpenDays.has(pd.d);
-    const dayMods = modules.filter(m => m.d === pd.d);
+  // ===== BY LIFECYCLE STAGE (replaces day-by-day) =====
+  // Groups modules by lifecycle stage rather than day so stakeholders read
+  // "this is where content sits in the billing lifecycle" instead of "this
+  // is what's on day X" (which reads as locked-in placement).
+  const stageOrder = ['collect','prep','calc','quality','bill','recovery','comms','__none__'];
+  const stageMeta = {
+    collect: {n:'01 Collect Data',      c:'stage-collect'},
+    prep:    {n:'02 Prep Work',         c:'stage-prep'},
+    calc:    {n:'03 Calculate Charges', c:'stage-calc'},
+    quality: {n:'04 Quality Check',     c:'stage-quality'},
+    bill:    {n:'05 Bill Residents',    c:'stage-bill'},
+    recovery:{n:'06 Recovery',          c:'stage-recovery'},
+    comms:   {n:'Customer Comms',       c:'stage-comms'},
+    __none__:{n:'Foundational / No Stage', c:'stage-none'},
+  };
+  const daysHtml = stageOrder.map(sk => {
+    const stageMods = modules.filter(m => {
+      const k = stageKey(m);
+      if (sk === '__none__') return !k;
+      return k === sk;
+    });
+    if (stageMods.length === 0) return '';
+    const total = stageMods.length;
+    const sCounts = {ns:0, ip:0, rv:0, r1:0, r2:0, r3:0, fr:0, cp:0, oh:0, cn:0};
+    stageMods.forEach(m => sCounts[getStatus(m)]++);
+    const sInFlight = sCounts.ip + sCounts.rv + sCounts.r1 + sCounts.r2 + sCounts.r3 + sCounts.fr;
+    const sCpPct = (sCounts.cp / total) * 100;
+    const sIpPct = (sInFlight / total) * 100;
+    let sCls = 'pending', sPill = 'pending', sPillLabel = 'Not Started';
+    if (sCounts.cp === total) { sCls = 'done'; sPill = 'done'; sPillLabel = 'Complete'; }
+    else if (sCounts.cp + sInFlight > 0) { sCls = 'active'; sPill = 'active'; sPillLabel = 'In Progress'; }
+    const meta = stageMeta[sk];
+    const isOpen = routeOpenStages.has(sk);
     const caret = isOpen ? '▼' : '▶';
+    // Sort modules inside the stage by day (ascending) then by title for stability.
+    const sortedMods = [...stageMods].sort((a,b) => (a.d - b.d) || a.n.localeCompare(b.n));
     const modsHtml = isOpen ? `
       <div class="route-day-mods">
-        ${dayMods.map(m => {
+        ${sortedMods.map(m => {
           const st = getStatus(m);
           return `
-            <div class="route-day-mod st-${st}">
-              <div class="rdm-title" title="${esc(m.n)}">${esc(m.n)}</div>
+            <div class="route-day-mod st-${st}" onclick="event.stopPropagation(); goToModule('${m.id}', ${m.d})" title="Open ${esc(m.n)}">
+              <div class="rdm-title">${esc(m.n)}</div>
               <div class="rdm-tags">
-                ${stageChip(m)}
-                <span class="rdm-status st-${st}">${statusLabel(st).replace(' Development','').replace('Not Started','Not Started')}</span>
+                <span class="rdm-day-tag" title="Working day placement (may shift)">Day ${m.d}</span>
+                <span class="rdm-status st-${st}">${statusLabel(st)}</span>
                 <span class="rdm-mins">${m.m}m</span>
               </div>
             </div>
           `;
         }).join('')}
-        <div class="route-day-actions">
-          <button class="route-day-goto" onclick="event.stopPropagation(); goToDay(${pd.d})">Open Day ${pd.d} →</button>
-        </div>
       </div>
     ` : '';
     return `
-      <div class="route-day ${pd.cls} ${isOpen ? 'open' : ''}" onclick="toggleRouteDay(${pd.d})">
+      <div class="route-day route-stage-block ${sCls} ${isOpen ? 'open' : ''}" onclick="toggleRouteStage('${sk}')">
         <div class="route-day-head">
-          <h4>Day ${pd.d} <span class="rd-caret">${caret}</span></h4>
-          <span class="route-day-pill ${pd.pill}">${pd.pillLabel}</span>
+          <h4><span class="stage-chip ${meta.c}" style="pointer-events:none;">${meta.n}</span> <span class="rd-caret">${caret}</span></h4>
+          <span class="route-day-pill ${sPill}">${sPillLabel}</span>
         </div>
         <div class="route-day-progress">
-          <div class="route-day-progress-ip" style="width: ${pd.cpPct + pd.ipRvPct}%;"></div>
-          <div class="route-day-progress-cp" style="width: ${pd.cpPct}%;"></div>
+          <div class="route-day-progress-ip" style="width: ${sCpPct + sIpPct}%;"></div>
+          <div class="route-day-progress-cp" style="width: ${sCpPct}%;"></div>
         </div>
         <div class="route-day-meta">
-          <span>${pd.total === 0 ? 'No modules yet' : pd.total + ' module' + (pd.total===1?'':'s') + ' · ' + pd.counts.cp + ' done'}</span>
-          <span class="pct">${Math.round(pd.cpPct)}%</span>
+          <span>${total} module${total===1?'':'s'} · ${sCounts.cp} done · ${sInFlight} in flight</span>
+          <span class="pct">${Math.round(sCpPct)}%</span>
         </div>
         ${modsHtml}
       </div>
     `;
-  }).join('');
+  }).filter(Boolean).join('');
 
   // ===== THE HANDOFF — modules currently with stakeholders =====
   // Includes both In Review (rv) and Final Review (fr) modules, since both
@@ -922,6 +1016,87 @@ function renderTracker() {
     handoffNoDate > 0 ? `<span class="handoff-count no-date">${handoffNoDate} no date</span>` : ''
   ].join('');
 
+  // ===== WITH DESIGN — modules currently in the design queue =====
+  // Mirrors The Handoff pattern but for content the design team owns:
+  // In Development (ip) + all Revisions rounds (r1, r2, r3). This is where
+  // auto-flipped modules land when a stakeholder review window closes.
+  const designStatuses = ['ip', 'r1', 'r2', 'r3'];
+  const designMods = modules
+    .filter(m => designStatuses.includes(getStatus(m)))
+    .map(m => {
+      const st = getStatus(m);
+      // "Just returned" = auto-flipped within the last 7 days.
+      let justReturned = false;
+      let ageDays = null;
+      if (m.returnedAt) {
+        const ret = new Date(m.returnedAt + 'T12:00:00');
+        const now = new Date(); now.setHours(12,0,0,0);
+        ageDays = Math.floor((now - ret) / (1000*60*60*24));
+        if (ageDays >= 0 && ageDays <= 7) justReturned = true;
+      }
+      // Sort priority: revisions with a returned-recently stamp first,
+      // then other revisions by round (r3 > r2 > r1), then in-development.
+      const priority = st === 'r3' ? 0 : st === 'r2' ? 1 : st === 'r1' ? 2 : 3;
+      return {m, st, priority, justReturned, ageDays};
+    })
+    .sort((a, b) => {
+      if (a.justReturned !== b.justReturned) return a.justReturned ? -1 : 1;
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      return a.m.d - b.m.d;
+    });
+
+  const designRevisionsCount = designMods.filter(x => x.st !== 'ip').length;
+  const designInDevCount = designMods.filter(x => x.st === 'ip').length;
+  const designReturnedCount = designMods.filter(x => x.justReturned).length;
+
+  const designRows = designMods.map(({m, st, justReturned, ageDays}) => {
+    const isRevision = st !== 'ip';
+    const icon = justReturned ? '↩' : (isRevision ? '✎' : '🛠');
+    const roundLabel = st === 'ip' ? 'In Development' :
+                       st === 'r1' ? 'Revisions Round 1' :
+                       st === 'r2' ? 'Revisions Round 2' :
+                       'Revisions Round 3';
+    const returnedTag = justReturned
+      ? `<span class="wd-returned-tag">${ageDays === 0 ? 'RETURNED TODAY' : ageDays === 1 ? 'RETURNED YESTERDAY' : 'RETURNED ' + ageDays + 'D AGO'}</span>`
+      : '';
+    // Optional: how long has this been sitting in design (based on design start).
+    let sittingHtml = '';
+    if (m.dstart) {
+      const start = new Date(m.dstart + 'T12:00:00');
+      const now = new Date(); now.setHours(12,0,0,0);
+      const days = Math.floor((now - start) / (1000*60*60*24));
+      if (days >= 0) sittingHtml = `<span class="wd-sitting">${days}d in design</span>`;
+    }
+    const cls = justReturned ? 'returned' : (isRevision ? 'revision' : '');
+    return `
+      <div class="wd-row ${cls} st-${st}" onclick="goToModule('${m.id}', ${m.d})" title="Jump to ${esc(m.n)}">
+        <div class="wd-icon">${icon}</div>
+        <div class="wd-main">
+          <div class="wd-day-badge">Day ${m.d}</div>
+          <div class="wd-title">${esc(m.n)}${returnedTag}</div>
+          <div class="wd-meta">${stageChip(m)}${sittingHtml}</div>
+        </div>
+        <div class="wd-status">
+          <div class="wd-round-label ${st}">${roundLabel}</div>
+          <div class="wd-mins-label">${m.m}m</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const designEmpty = `
+    <div class="wd-empty">
+      <div class="wd-empty-title">✨ Design queue is clear</div>
+      <div class="wd-empty-sub">Nothing is currently being built or revised. New modules land here when they move to <strong>In Development</strong>, and returned modules land here when a stakeholder review window closes without feedback.</div>
+    </div>
+  `;
+
+  const designCountsHtml = [
+    designReturnedCount > 0 ? `<span class="wd-count returned">${designReturnedCount} just returned</span>` : '',
+    designRevisionsCount > 0 ? `<span class="wd-count revision">${designRevisionsCount} in revision</span>` : '',
+    `<span class="wd-count active">${designInDevCount} in development</span>`
+  ].filter(Boolean).join('');
+
   document.getElementById('trackerContent').innerHTML = `
     <div class="route-wrap">
       <div class="route-header">
@@ -964,47 +1139,88 @@ function renderTracker() {
           <div>
             <div class="handoff-eyebrow">The Handoff</div>
             <div class="handoff-title">With Stakeholders</div>
-            <div class="handoff-sub">Modules currently in stakeholders' hands. Each package shows sent date, due date, and how much of the review window is left.</div>
+            <div class="handoff-sub">Modules currently in stakeholders' hands. Each package shows sent date, due date, and how much of the review window is left. When a review window closes without feedback, the module auto-returns to the design queue below.</div>
           </div>
           <div class="handoff-counts">${countsHtml}</div>
         </div>
         ${reviewMods.length ? `<div class="handoff-list">${handoffRows}</div>` : handoffEmpty}
       </div>
 
+      <div class="handoff-wrap wd-wrap">
+        <div class="handoff-header">
+          <div>
+            <div class="handoff-eyebrow wd-eyebrow">The Queue</div>
+            <div class="handoff-title">With Design</div>
+            <div class="handoff-sub">Modules the design team is actively building or revising. Items tagged <strong>RETURNED</strong> came back from stakeholder review within the last week.</div>
+          </div>
+          <div class="handoff-counts">${designCountsHtml}</div>
+        </div>
+        ${designMods.length ? `<div class="handoff-list wd-list">${designRows}</div>` : designEmpty}
+      </div>
+
+      <div class="placement-banner">
+        <div class="placement-banner-icon">📍</div>
+        <div class="placement-banner-body">
+          <div class="placement-banner-title">Placement is a working sequence, not a commitment</div>
+          <div class="placement-banner-sub">Content is grouped below by <strong>lifecycle stage</strong> — that's where each module belongs in the billing workflow. Day tags shown on individual modules are the current working placement and may shift as scoping decisions land.</div>
+        </div>
+      </div>
+
       <div class="route-days-heading">
-        Day-by-Day
-        <span class="hint">Click any day to expand · click again to collapse</span>
+        By Lifecycle Stage
+        <span class="hint">Click any stage to expand · click again to collapse</span>
       </div>
       <div class="route-days">${daysHtml}</div>
     </div>
   `;
 }
 
-// ===== DAY VIEW (Content Details) =====
+// ===== DAY VIEW (Content Details — grouped by Lifecycle Stage) =====
+// Primary axis is now the lifecycle stage the module teaches, matching the
+// billing workflow. Day placement is a secondary filter and appears as a
+// small tag on each card so stakeholders don't read it as locked-in.
 function renderDay() {
-  const day = parseInt(document.getElementById('daySelect').value);
-  const stageFilterEl = document.getElementById('dayStageFilter');
-  const stageFilter = stageFilterEl ? stageFilterEl.value : '';
-  let dayMods = orderedForDay(day);
-  // Apply lifecycle filter if set. "__none__" matches modules with no stage.
-  if (stageFilter) {
-    dayMods = dayMods.filter(m => {
-      const k = stageKey(m);
-      if (stageFilter === '__none__') return !k;
-      return k === stageFilter;
-    });
-  }
-  const mins = dayMods.reduce((s,m) => s + m.m, 0);
-  const capCls = capacityClass(mins);
-  const pct = Math.min((mins / DAY_BUDGET) * 100, 100);
-  const ds = dayStatus(mins);
-  const otjMinutes = Math.max(0, DAY_BUDGET - mins);
-  const otjHours = (otjMinutes / 60).toFixed(1);
+  const stageEl = document.getElementById('dayStageSelect');
+  const dayEl = document.getElementById('daySelect');
+  const stage = stageEl ? stageEl.value : 'collect';
+  const dayFilterRaw = dayEl ? dayEl.value : '';
+  const dayFilter = dayFilterRaw ? parseInt(dayFilterRaw) : null;
 
-  const emptyMsg = stageFilter
-    ? 'No modules match the selected lifecycle stage on this day.'
-    : 'No content yet for this day. Open the Content Master List to add modules.';
-  const cards = dayMods.length === 0 ? `<div class="empty">${emptyMsg}</div>` : dayMods.map(m => {
+  // Pull every module matching the selected stage (across all days).
+  let stageMods = modules.filter(m => {
+    const k = stageKey(m);
+    if (stage === '__none__') return !k;
+    return k === stage;
+  });
+  if (dayFilter !== null && !isNaN(dayFilter)) {
+    stageMods = stageMods.filter(m => m.d === dayFilter);
+  }
+  // Sort by day (ascending) so learners/reviewers see the intended flow.
+  stageMods.sort((a,b) => (a.d - b.d) || a.n.localeCompare(b.n));
+
+  const stageMetaMap = {
+    collect: {n:'01 · Collect Data',      c:'stage-collect'},
+    prep:    {n:'02 · Prep Work',         c:'stage-prep'},
+    calc:    {n:'03 · Calculate Charges', c:'stage-calc'},
+    quality: {n:'04 · Quality Check',     c:'stage-quality'},
+    bill:    {n:'05 · Bill Residents',    c:'stage-bill'},
+    recovery:{n:'06 · Recovery',          c:'stage-recovery'},
+    comms:   {n:'Customer Comms',         c:'stage-comms'},
+    __none__:{n:'Foundational / No Stage',c:'stage-none'},
+  };
+  const stageMeta = stageMetaMap[stage] || stageMetaMap.collect;
+
+  const totalMins = stageMods.reduce((s,m) => s + m.m, 0);
+  const totalHours = (totalMins / 60).toFixed(1);
+  const daySpread = [...new Set(stageMods.map(m => m.d))].sort((a,b) => a-b);
+  const daySpreadLabel = daySpread.length === 0 ? '—' :
+    daySpread.length === 1 ? `Day ${daySpread[0]}` :
+    `Days ${daySpread[0]}–${daySpread[daySpread.length-1]} (${daySpread.length} days)`;
+
+  const emptyMsg = dayFilter !== null
+    ? `No modules for this stage on Day ${dayFilter}.`
+    : 'No modules yet in this stage. Open the Content Master List to add modules.';
+  const cards = stageMods.length === 0 ? `<div class="empty">${emptyMsg}</div>` : stageMods.map(m => {
     const st = getStatus(m);
     const info = reviewInfo(m);
     return `
@@ -1015,6 +1231,7 @@ function renderDay() {
         <div class="module-meta">
           ${stageChip(m)}
           ${statusPill(m)}
+          <span class="working-day-tag" title="Working day placement — may shift">Day ${m.d}</span>
           <span class="ct-pill">${esc(m.c)}</span>
           <span class="mins-pill">${m.m} min</span>
           <div class="module-controls">
@@ -1042,24 +1259,22 @@ function renderDay() {
   }).join('');
 
   document.getElementById('dayContent').innerHTML = `
-    <div class="day-budget-bar">
-      <div class="budget-stats">
-        <span>Total: <strong>${mins} minutes</strong> · Budget: <strong>${DAY_BUDGET} min</strong></span>
-        <span>Status: <strong>${ds.text}</strong></span>
+    <div class="stage-summary-bar ${stageMeta.c}">
+      <div class="stage-summary-heading">
+        <span class="stage-chip ${stageMeta.c}" style="pointer-events:none;">${stageMeta.n}</span>
+        <span class="stage-summary-count">${stageMods.length} module${stageMods.length === 1 ? '' : 's'}</span>
       </div>
-      <div class="budget-bar"><div class="budget-bar-fill ${capCls}" style="width:${pct}%"></div></div>
-      ${otjMinutes > 0 ? `<div class="otj-note"><strong>${otjMinutes} minutes</strong> (${otjHours}h) available for OTJ practice, breaks, or buffer time</div>` : ''}
+      <div class="stage-summary-meta">
+        <span><strong>${totalMins}</strong> minutes total (${totalHours}h)</span>
+        <span>Working placement: <strong>${daySpreadLabel}</strong></span>
+      </div>
     </div>
-    <div class="stage-legend">
-      <span class="legend-label">Lifecycle</span>
-      <span class="stage-chip stage-collect">01 Collect</span>
-      <span class="stage-chip stage-prep">02 Prep</span>
-      <span class="stage-chip stage-calc">03 Calc</span>
-      <span class="stage-chip stage-quality">04 QC</span>
-      <span class="stage-chip stage-bill">05 Bill</span>
-      <span class="stage-chip stage-recovery">06 Recov</span>
-      <span class="stage-chip stage-comms">Comms</span>
-      <span class="stage-chip stage-none">Foundational</span>
+    <div class="placement-banner compact">
+      <div class="placement-banner-icon">📍</div>
+      <div class="placement-banner-body">
+        <div class="placement-banner-title">Day tags below are working placement, not commitments</div>
+        <div class="placement-banner-sub">Content is organized by the billing lifecycle stage it teaches. The day pill on each module shows the current tentative day and may shift as scoping decisions land. For legacy day-based grouping, see the <strong>Content Master List</strong> tab.</div>
+      </div>
     </div>
     <div class="module-list">${cards}</div>
   `;
@@ -1649,6 +1864,7 @@ function exportJSON() {
   // Render immediately from the local copy, then refresh once the Sheet answers.
   loadLocalOverlays();
   rebuildModules();
+  runAutoFlip();
   // Route from hash if present, otherwise default to the Program Dashboard tab.
   const hasHash = HASH_TO_VIEW[(window.location.hash || '').replace(/^#/, '').toLowerCase()];
   if (hasHash) applyHashRoute();
@@ -1656,6 +1872,7 @@ function exportJSON() {
   if (SYNC_URL) {
     await loadOverlays();
     rebuildModules();
+    runAutoFlip();
     // Re-render current view after Sheet sync.
     const currentTab = document.querySelector('.tab.active');
     if (currentTab) showView(currentTab.dataset.view, {fromHash: true});

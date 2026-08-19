@@ -3433,3 +3433,331 @@ body.stakeholder .compact-row .drag-handle { display: none; }
   .review-corner-ribbon { display: none; }
 }
 
+
+/* =========================================================
+   PLACEMENT BANNER — reinforces "day = working sequence"
+   Appears above stage-grouped views so stakeholders read day
+   pills as tentative rather than locked-in commitments.
+   ========================================================= */
+.placement-banner {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: linear-gradient(135deg, rgba(240,180,41,0.10), rgba(240,180,41,0.03));
+  border: 1px solid rgba(240,180,41,0.35);
+  border-left: 4px solid #F0B429;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin: 18px 0 22px;
+}
+.placement-banner.compact {
+  padding: 10px 14px;
+  margin: 14px 0 18px;
+}
+.placement-banner-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.placement-banner-body { flex: 1; min-width: 0; }
+.placement-banner-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--white, #fff);
+  margin-bottom: 4px;
+  letter-spacing: 0.2px;
+}
+.placement-banner-sub {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.78);
+}
+.placement-banner-sub strong {
+  color: #FFDC5E;
+  font-weight: 700;
+}
+
+/* =========================================================
+   WORKING DAY TAG — small muted pill on module cards
+   Reads as "tentative" rather than "assigned"
+   ========================================================= */
+.working-day-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  background: rgba(255,255,255,0.05);
+  border: 1px dashed rgba(255,255,255,0.30);
+  color: rgba(255,255,255,0.68);
+  cursor: help;
+}
+.rdm-day-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  background: rgba(255,255,255,0.05);
+  border: 1px dashed rgba(255,255,255,0.28);
+  color: rgba(255,255,255,0.65);
+}
+
+/* =========================================================
+   ROUTE STAGE BLOCK — expandable lifecycle-stage groupings
+   Uses the same shell as .route-day so hover/open animations
+   already apply. Just an override to give the stage chip
+   room to breathe in the header.
+   ========================================================= */
+.route-stage-block .route-day-head h4 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.route-stage-block .route-day-head h4 .stage-chip {
+  font-size: 13px;
+  padding: 4px 12px;
+  cursor: default;
+}
+.route-stage-block .route-day-mod {
+  cursor: pointer;
+}
+.route-stage-block .route-day-mod:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+/* =========================================================
+   STAGE SUMMARY BAR — top-of-Content-Details header replacing
+   the old day-budget bar since we're now stage-primary.
+   ========================================================= */
+.stage-summary-bar {
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.10);
+  margin-bottom: 14px;
+}
+.stage-summary-bar.stage-collect  { border-left: 5px solid #D31E1E; }
+.stage-summary-bar.stage-prep     { border-left: 5px solid #FF8300; }
+.stage-summary-bar.stage-calc     { border-left: 5px solid #FEBE10; }
+.stage-summary-bar.stage-quality  { border-left: 5px solid #77BC1F; }
+.stage-summary-bar.stage-bill     { border-left: 5px solid #2172B7; }
+.stage-summary-bar.stage-recovery { border-left: 5px solid #680054; }
+.stage-summary-bar.stage-comms    { border-left: 5px solid #6BB4E8; }
+.stage-summary-bar.stage-none     { border-left: 5px solid rgba(255,255,255,0.25); }
+.stage-summary-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.stage-summary-heading .stage-chip {
+  font-size: 14px;
+  padding: 5px 14px;
+}
+.stage-summary-count {
+  color: rgba(255,255,255,0.70);
+  font-size: 13px;
+  font-weight: 600;
+}
+.stage-summary-meta {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: rgba(255,255,255,0.72);
+}
+.stage-summary-meta strong { color: var(--white, #fff); font-weight: 700; }
+
+/* =========================================================
+   WITH DESIGN WIDGET — mirrors The Handoff pattern
+   Uses .handoff-wrap.wd-wrap for outer shell + wd-* internals.
+   Blue/teal palette to distinguish from the amber Handoff.
+   ========================================================= */
+.handoff-wrap.wd-wrap {
+  border-color: rgba(107,180,232,0.30);
+  background: linear-gradient(135deg, rgba(33,114,183,0.05), rgba(255,255,255,0.01));
+  margin-top: 18px;
+}
+.handoff-wrap.wd-wrap .handoff-eyebrow.wd-eyebrow {
+  color: #6BB4E8;
+}
+.handoff-wrap.wd-wrap .handoff-title {
+  color: #A8D4F5;
+}
+.wd-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  border: 1px solid;
+  margin-left: 6px;
+}
+.wd-count.active   { background: rgba(107,180,232,0.14); border-color: rgba(107,180,232,0.55); color: #A8D4F5; }
+.wd-count.revision { background: rgba(255,131,0,0.14);   border-color: rgba(255,131,0,0.55);   color: #FFC77F; }
+.wd-count.returned { background: rgba(240,180,41,0.16);  border-color: rgba(240,180,41,0.60);  color: #FFDC5E; }
+.wd-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wd-row {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-left: 4px solid #6BB4E8;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+}
+.wd-row:hover {
+  background: rgba(255,255,255,0.06);
+  transform: translateX(2px);
+  border-color: rgba(107,180,232,0.40);
+}
+.wd-row.revision { border-left-color: #FF8300; }
+.wd-row.returned {
+  border-left-color: #F0B429;
+  background: rgba(240,180,41,0.06);
+  animation: wdReturnedPulse 2.4s ease-in-out 3;
+}
+@keyframes wdReturnedPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(240,180,41,0); }
+  50%      { box-shadow: 0 0 0 4px rgba(240,180,41,0.20); }
+}
+.wd-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: rgba(107,180,232,0.14);
+  color: #A8D4F5;
+  flex-shrink: 0;
+}
+.wd-row.revision .wd-icon { background: rgba(255,131,0,0.14); color: #FFC77F; }
+.wd-row.returned .wd-icon { background: rgba(240,180,41,0.20); color: #FFDC5E; }
+.wd-main { min-width: 0; }
+.wd-day-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px dashed rgba(255,255,255,0.28);
+  color: rgba(255,255,255,0.72);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.wd-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--white, #fff);
+  line-height: 1.35;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wd-returned-tag {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(240,180,41,0.20);
+  border: 1px solid rgba(240,180,41,0.55);
+  color: #FFDC5E;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  vertical-align: middle;
+}
+.wd-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.wd-sitting {
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+  font-style: italic;
+}
+.wd-status {
+  text-align: right;
+  min-width: 140px;
+}
+.wd-round-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 10px;
+  display: inline-block;
+  margin-bottom: 4px;
+  border: 1px solid;
+}
+.wd-round-label.ip { background: rgba(107,180,232,0.14); border-color: rgba(107,180,232,0.55); color: #A8D4F5; }
+.wd-round-label.r1 { background: rgba(255,131,0,0.14); border-color: rgba(255,131,0,0.55); color: #FFC77F; }
+.wd-round-label.r2 { background: rgba(229,106,0,0.16); border-color: rgba(229,106,0,0.60); color: #FFB870; }
+.wd-round-label.r3 { background: rgba(204,85,0,0.18); border-color: rgba(204,85,0,0.65); color: #FFA860; }
+.wd-mins-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+}
+.wd-empty {
+  padding: 24px 20px;
+  text-align: center;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed rgba(255,255,255,0.15);
+}
+.wd-empty-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #A8D4F5;
+  margin-bottom: 6px;
+}
+.wd-empty-sub {
+  font-size: 12.5px;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.55;
+  max-width: 520px;
+  margin: 0 auto;
+}
+.wd-empty-sub strong { color: rgba(255,255,255,0.85); font-weight: 700; }
+
+@media (max-width: 720px) {
+  .wd-row {
+    grid-template-columns: 40px 1fr;
+    gap: 10px;
+  }
+  .wd-status {
+    grid-column: 1 / -1;
+    text-align: left;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding-left: 50px;
+  }
+  .stage-summary-meta { gap: 12px; }
+}
