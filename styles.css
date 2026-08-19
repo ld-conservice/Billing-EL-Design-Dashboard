@@ -3436,19 +3436,21 @@ body.stakeholder .compact-row .drag-handle { display: none; }
 
 /* =========================================================
    PLACEMENT BANNER — reinforces "day = working sequence"
-   Appears above stage-grouped views so stakeholders read day
-   pills as tentative rather than locked-in commitments.
+   Two variants:
+   .placement-banner (default)      - light backgrounds (Content Details)
+   .placement-banner.on-dark        - dark backgrounds (Dashboard/Tracker)
    ========================================================= */
 .placement-banner {
   display: flex;
   gap: 14px;
   align-items: flex-start;
-  background: linear-gradient(135deg, rgba(240,180,41,0.10), rgba(240,180,41,0.03));
-  border: 1px solid rgba(240,180,41,0.35);
+  background: linear-gradient(135deg, rgba(240,180,41,0.15), rgba(240,180,41,0.05));
+  border: 1px solid rgba(240,180,41,0.55);
   border-left: 4px solid #F0B429;
   border-radius: 10px;
   padding: 14px 18px;
   margin: 18px 0 22px;
+  color: var(--navy, #263746);
 }
 .placement-banner.compact {
   padding: 10px 14px;
@@ -3464,23 +3466,39 @@ body.stakeholder .compact-row .drag-handle { display: none; }
 .placement-banner-title {
   font-weight: 700;
   font-size: 14px;
-  color: var(--white, #fff);
+  color: var(--navy, #263746);
   margin-bottom: 4px;
   letter-spacing: 0.2px;
 }
 .placement-banner-sub {
   font-size: 12.5px;
   line-height: 1.55;
-  color: rgba(255,255,255,0.78);
+  color: var(--gray-body, #555759);
 }
 .placement-banner-sub strong {
-  color: #FFDC5E;
+  color: #8A6B10;
   font-weight: 700;
+}
+
+/* Dark-background variant for the Dashboard/Tracker tab. */
+.placement-banner.on-dark {
+  background: linear-gradient(135deg, rgba(240,180,41,0.10), rgba(240,180,41,0.03));
+  border-color: rgba(240,180,41,0.35);
+  color: var(--white, #fff);
+}
+.placement-banner.on-dark .placement-banner-title {
+  color: var(--white, #fff);
+}
+.placement-banner.on-dark .placement-banner-sub {
+  color: rgba(255,255,255,0.78);
+}
+.placement-banner.on-dark .placement-banner-sub strong {
+  color: #FFDC5E;
 }
 
 /* =========================================================
    WORKING DAY TAG — small muted pill on module cards
-   Reads as "tentative" rather than "assigned"
+   Content Details tab is light-themed, so use navy tones.
    ========================================================= */
 .working-day-tag {
   display: inline-flex;
@@ -3490,11 +3508,12 @@ body.stakeholder .compact-row .drag-handle { display: none; }
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.5px;
-  background: rgba(255,255,255,0.05);
-  border: 1px dashed rgba(255,255,255,0.30);
-  color: rgba(255,255,255,0.68);
+  background: rgba(38,55,70,0.06);
+  border: 1px dashed rgba(38,55,70,0.35);
+  color: var(--gray-body, #555759);
   cursor: help;
 }
+/* Dark-context version for use in the Tracker rows. */
 .rdm-day-tag {
   display: inline-flex;
   align-items: center;
@@ -3514,16 +3533,35 @@ body.stakeholder .compact-row .drag-handle { display: none; }
    already apply. Just an override to give the stage chip
    room to breathe in the header.
    ========================================================= */
+/* Force full-width stacking: parent .route-days is a grid for day cards, but
+   stage cards are wider and need to stack vertically so expanded content
+   is readable. Span the full grid width regardless of column count. */
+.route-stage-block {
+  grid-column: 1 / -1;
+}
+.route-stage-block .route-day-head {
+  flex-wrap: nowrap;
+  gap: 12px;
+}
 .route-stage-block .route-day-head h4 {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 .route-stage-block .route-day-head h4 .stage-chip {
   font-size: 13px;
   padding: 4px 12px;
   cursor: default;
+  white-space: nowrap;
+}
+.route-stage-block .route-day-head h4 .rd-caret {
+  flex-shrink: 0;
+}
+.route-stage-block .route-day-pill {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .route-stage-block .route-day-mod {
   cursor: pointer;
@@ -3535,12 +3573,14 @@ body.stakeholder .compact-row .drag-handle { display: none; }
 /* =========================================================
    STAGE SUMMARY BAR — top-of-Content-Details header replacing
    the old day-budget bar since we're now stage-primary.
+   Content Details tab is light-themed.
    ========================================================= */
 .stage-summary-bar {
   padding: 16px 20px;
   border-radius: 12px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.10);
+  background: var(--white, #fff);
+  border: 1px solid rgba(38,55,70,0.10);
+  box-shadow: 0 2px 8px rgba(38,55,70,0.05);
   margin-bottom: 14px;
 }
 .stage-summary-bar.stage-collect  { border-left: 5px solid #D31E1E; }
@@ -3550,7 +3590,7 @@ body.stakeholder .compact-row .drag-handle { display: none; }
 .stage-summary-bar.stage-bill     { border-left: 5px solid #2172B7; }
 .stage-summary-bar.stage-recovery { border-left: 5px solid #680054; }
 .stage-summary-bar.stage-comms    { border-left: 5px solid #6BB4E8; }
-.stage-summary-bar.stage-none     { border-left: 5px solid rgba(255,255,255,0.25); }
+.stage-summary-bar.stage-none     { border-left: 5px solid rgba(38,55,70,0.30); }
 .stage-summary-heading {
   display: flex;
   align-items: center;
@@ -3563,7 +3603,7 @@ body.stakeholder .compact-row .drag-handle { display: none; }
   padding: 5px 14px;
 }
 .stage-summary-count {
-  color: rgba(255,255,255,0.70);
+  color: var(--gray-body, #555759);
   font-size: 13px;
   font-weight: 600;
 }
@@ -3572,9 +3612,9 @@ body.stakeholder .compact-row .drag-handle { display: none; }
   gap: 24px;
   flex-wrap: wrap;
   font-size: 13px;
-  color: rgba(255,255,255,0.72);
+  color: var(--gray-body, #555759);
 }
-.stage-summary-meta strong { color: var(--white, #fff); font-weight: 700; }
+.stage-summary-meta strong { color: var(--navy, #263746); font-weight: 700; }
 
 /* =========================================================
    WITH DESIGN WIDGET — mirrors The Handoff pattern

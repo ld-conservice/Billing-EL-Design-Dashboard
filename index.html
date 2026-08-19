@@ -11,7 +11,7 @@
 <header>
   <div>
     <h1>Billing EL Program Dashboard</h1>
-    <div class="subtitle">Days 1–10 · Conservice Billing Entry Level</div>
+    <div class="subtitle">Conservice Billing Entry Level</div>
   </div>
   <div class="header-controls">
     <button class="btn ghost editor-only" onclick="exportJSON()">Export</button>
@@ -512,9 +512,13 @@ function cycleStatus(id) {
     const t = new Date();
     const iso = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
     if (next === 'fr') {
-      // Final Review is a fresh review window — always restamp and clear any
-      // manual close-date override so the 5-business-day auto-window applies.
+      // Final Review is a fresh review window. Restamp BOTH dend and dendActual
+      // (reviewInfo prefers dendActual, so stamping only dend leaves stale data
+      // in the sent-date field and the auto-flip system then treats the fresh
+      // review as already past its window). Also clear any manual close-date
+      // override so the 7-business-day auto-window applies.
       overlays.edits[id].dend = iso;
+      overlays.edits[id].dendActual = iso;
       overlays.edits[id].revclose = '';
     } else {
       const merged = Object.assign({}, m, overlays.edits[id]);
@@ -1158,11 +1162,11 @@ function renderTracker() {
         ${designMods.length ? `<div class="handoff-list wd-list">${designRows}</div>` : designEmpty}
       </div>
 
-      <div class="placement-banner">
+      <div class="placement-banner on-dark">
         <div class="placement-banner-icon">📍</div>
         <div class="placement-banner-body">
           <div class="placement-banner-title">Placement is a working sequence, not a commitment</div>
-          <div class="placement-banner-sub">Content is grouped below by <strong>lifecycle stage</strong> — that's where each module belongs in the billing workflow. Day tags shown on individual modules are the current working placement and may shift as scoping decisions land.</div>
+          <div class="placement-banner-sub">Content is grouped below by <strong>lifecycle stage</strong>, which is where each module belongs in the billing workflow. Day tags shown on individual modules are the current working placement and may shift as scoping decisions land.</div>
         </div>
       </div>
 
@@ -1231,7 +1235,7 @@ function renderDay() {
         <div class="module-meta">
           ${stageChip(m)}
           ${statusPill(m)}
-          <span class="working-day-tag" title="Working day placement — may shift">Day ${m.d}</span>
+          <span class="working-day-tag" title="Working day placement, may shift">Day ${m.d}</span>
           <span class="ct-pill">${esc(m.c)}</span>
           <span class="mins-pill">${m.m} min</span>
           <div class="module-controls">
@@ -1738,7 +1742,9 @@ function openAddModal() {
   document.getElementById('f-a2').value = '';
   document.getElementById('f-a3').value = '';
   document.getElementById('f-notes').value = '';
-  document.getElementById('modalBackdrop').classList.add('show');
+  const mb = document.getElementById('modalBackdrop');
+  mb.classList.add('show');
+  mb.scrollTop = 0;
 }
 function openEditModal(id) {
   const m = modules.find(x => x.id === id);
@@ -1765,7 +1771,9 @@ function openEditModal(id) {
   document.getElementById('f-a2').value = m.a2 || '';
   document.getElementById('f-a3').value = m.a3 || '';
   document.getElementById('f-notes').value = m.nt || '';
-  document.getElementById('modalBackdrop').classList.add('show');
+  const mbE = document.getElementById('modalBackdrop');
+  mbE.classList.add('show');
+  mbE.scrollTop = 0;
 }
 function closeModal() { document.getElementById('modalBackdrop').classList.remove('show'); }
 function collectForm() {
