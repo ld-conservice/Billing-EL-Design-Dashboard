@@ -3480,11 +3480,15 @@ body.stakeholder .compact-row .drag-handle { display: none; }
   font-weight: 700;
 }
 
-/* Dark-background variant for the Dashboard/Tracker tab. */
+/* Dark-background variant for the Dashboard/Tracker tab. Handoff-wrap and
+   route-days both sit inside .route-wrap with a 32px horizontal inset, so the
+   banner needs matching side margins to align with them visually. */
 .placement-banner.on-dark {
   background: linear-gradient(135deg, rgba(240,180,41,0.10), rgba(240,180,41,0.03));
   border-color: rgba(240,180,41,0.35);
   color: var(--white, #fff);
+  margin-left: 32px;
+  margin-right: 32px;
 }
 .placement-banner.on-dark .placement-banner-title {
   color: var(--white, #fff);
