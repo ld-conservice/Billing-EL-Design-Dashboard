@@ -1,305 +1,1891 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Foundations Program Dashboard</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Billing EL Program Dashboard</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<!-- ===================== HEADER ===================== -->
-<header class="topbar">
-  <div class="wrap topbar-inner">
-    <div class="brand">
-      <span class="brand-mark" aria-hidden="true"></span>
-      <div>
-        <h1 id="prog-name">Foundations Program Dashboard</h1>
-        <p class="brand-sub" id="prog-sub">Loading&hellip;</p>
-      </div>
-    </div>
-    <div class="topbar-actions">
-      <span class="sync-badge s-local" id="sync-badge">Loading&hellip;</span>
-      <button class="btn btn-ghost" id="btn-refresh">Refresh</button>
-      <button class="btn btn-ghost" id="btn-export">Export</button>
-      <button class="btn btn-ghost" id="btn-print">Print</button>
-      <button class="btn btn-primary" id="btn-add">+ Add Content</button>
-    </div>
+<header>
+  <div>
+    <h1>Billing EL Program Dashboard</h1>
+    <div class="subtitle">Conservice Billing Entry Level</div>
   </div>
-  <nav class="tabs wrap" role="tablist">
-    <button class="tab is-active" data-view="overview" role="tab">Overview</button>
-    <button class="tab" data-view="map" role="tab">Program Map</button>
-    <button class="tab" data-view="addie" role="tab">ADDIE</button>
-    <button class="tab" data-view="content" role="tab">Content Master List</button>
-    <button class="tab" data-view="decisions" role="tab">Decisions</button>
-    <button class="tab" data-view="guardrails" role="tab">Guard Rails</button>
-    <button class="tab" data-view="resources" role="tab">Resources</button>
-  </nav>
+  <div class="header-controls">
+    <button class="btn ghost editor-only" onclick="exportJSON()">Export</button>
+    <button class="btn ghost" onclick="window.print()">Print</button>
+  </div>
 </header>
 
-<main class="wrap">
+<nav class="tabs">
+  <button class="tab active" data-view="tracker" onclick="showView('tracker')">Billing EL Program Dashboard</button>
+  <button class="tab" data-view="overview" onclick="showView('overview')">Design Overview</button>
+  <button class="tab" data-view="day" onclick="showView('day')">Content Details</button>
+  <button class="tab" data-view="all" onclick="showView('all')">Content Master List</button>
+</nav>
 
-<!-- ===================== OVERVIEW ===================== -->
-<section class="view is-active" id="view-overview">
-
-  <div class="kpi-row" id="kpis"></div>
-
-  <div class="grid-2">
-    <section class="card">
-      <h2>Where the build stands</h2>
-      <p class="card-note">Readiness of the universal model, from Week One Design v4.</p>
-      <div id="readiness"></div>
-    </section>
-
-    <section class="card">
-      <h2>Needs a decision</h2>
-      <p class="card-note">Open items with a named owner. Full list on the Decisions tab.</p>
-      <ul class="lean-list" id="open-top"></ul>
-    </section>
+<main>
+  <!-- TRACKER -->
+  <div id="view-tracker" class="view active">
+    <div id="trackerContent"></div>
   </div>
 
-  <section class="card">
-    <h2>Work in flight</h2>
-    <p class="card-note">Live from the Monday board.</p>
-    <div class="grid-3" id="now-next"></div>
-  </section>
+  <!-- OVERVIEW -->
+  <div id="view-overview" class="view">
+    <div class="kpi-row" id="kpiRow"></div>
+    <div id="dayGrid"></div>
+  </div>
 
-</section>
+  <!-- WEEK -->
+  <div id="view-week" class="view">
+    <div id="weekContent"></div>
+  </div>
 
-<!-- ===================== PROGRAM MAP ===================== -->
-<section class="view" id="view-map">
-
-  <section class="card">
-    <h2>The learner journey</h2>
-    <p class="card-note" id="map-intro"></p>
-    <div class="flow" id="cornerstone-flow"></div>
-    <div class="flow-legend">
-      <span><i class="sw sw-universal"></i> Universal, every new hire</span>
-      <span><i class="sw sw-branch"></i> Role-specific from here</span>
-    </div>
-  </section>
-
-  <section class="card">
-    <h2>Where learners go next</h2>
-    <p class="card-note">Skills Learning Paths. Branching begins at Cornerstone 4.</p>
-    <div class="chips" id="pathway-chips"></div>
-  </section>
-
-  <section class="card">
-    <h2>The bill&rsquo;s journey</h2>
-    <p class="card-note">The content spine threaded through the Cornerstones. Colour shows whether the evidence exists to design it.</p>
-    <div id="journey"></div>
-    <div class="flow-legend">
-      <span><i class="sw sw-ok"></i> Confirmed, build now</span>
-      <span><i class="sw sw-pending"></i> Pending confirmation</span>
-      <span><i class="sw sw-unowned"></i> Unowned or unverified</span>
-    </div>
-  </section>
-
-</section>
-
-<!-- ===================== ADDIE ===================== -->
-<section class="view" id="view-addie">
-  <section class="card">
-    <h2>ADDIE</h2>
-    <p class="card-note">Where the redesign sits in the design process, and what each phase covers.</p>
-    <div id="addie"></div>
-  </section>
-</section>
-
-<!-- ===================== CONTENT ===================== -->
-<section class="view" id="view-content">
-  <section class="card">
-    <div class="card-head">
-      <div>
-        <h2>Content Master List</h2>
-        <p class="card-note" id="content-note"></p>
-        <p class="src-note">Shows deliverables sitting in the Cornerstone groups on the Monday board. Decisions, blockers, and program-level items are deliberately excluded; they live on the Decisions tab.</p>
+  <!-- DAY (Content Details — now grouped by Lifecycle Stage) -->
+  <div id="view-day" class="view">
+    <div class="day-header">
+      <h2>Content Details</h2>
+      <div class="day-header-selects">
+        <select id="dayStageSelect" class="day-select" onchange="renderDay()" title="Choose a lifecycle stage">
+          <option value="collect">01 · Collect Data</option>
+          <option value="prep">02 · Prep Work</option>
+          <option value="calc">03 · Calculate Charges</option>
+          <option value="quality">04 · Quality Check</option>
+          <option value="bill">05 · Bill Residents</option>
+          <option value="recovery">06 · Recovery</option>
+          <option value="comms">Customer Comms</option>
+          <option value="__none__">Foundational / No Stage</option>
+        </select>
+        <select id="daySelect" class="day-select" onchange="renderDay()" title="Optional: filter by working day placement">
+          <option value="">All working days</option>
+          <option value="1">Day 1</option>
+          <option value="2">Day 2</option>
+          <option value="3">Day 3</option>
+          <option value="4">Day 4</option>
+          <option value="5">Day 5</option>
+          <option value="6">Day 6</option>
+          <option value="7">Day 7</option>
+          <option value="8">Day 8</option>
+          <option value="9">Day 9</option>
+          <option value="10">Day 10</option>
+        </select>
       </div>
-      <button class="btn btn-primary btn-sm" id="btn-add-2">+ Add Content</button>
     </div>
+    <div id="dayContent"></div>
+  </div>
 
-    <div class="filters">
-      <input type="search" id="f-search" placeholder="Search by name&hellip;" aria-label="Search content">
-      <select id="f-cornerstone" aria-label="Filter by cornerstone"><option value="">All Cornerstones</option></select>
-      <select id="f-pathway" aria-label="Filter by pathway"><option value="">All Pathways</option></select>
-      <select id="f-status" aria-label="Filter by status"><option value="">All Statuses</option></select>
-      <select id="f-source" aria-label="Filter by source">
-        <option value="">All Sources</option>
-        <option value="monday">From Monday</option>
-        <option value="local">Added here</option>
+  <!-- ALL CONTENT (Content Master List) -->
+  <div id="view-all" class="view">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+      <div class="section-title" style="margin-bottom:0;">Content Master List <span style="font-weight:400;color:var(--gray-body);font-size:14px;" id="allCountLabel"></span></div>
+      <button class="btn solid editor-only" onclick="openAddModal()">+ Add Content</button>
+    </div>
+    <div class="all-content-controls">
+      <input type="text" id="filterInput" class="filter-input" placeholder="Filter by title, day, content type, or system..." oninput="renderAll()">
+      <select id="filterDay" class="day-select" onchange="renderAll()">
+        <option value="">All Days</option>
+        <option value="1">Day 1</option>
+        <option value="2">Day 2</option>
+        <option value="3">Day 3</option>
+        <option value="4">Day 4</option>
+        <option value="5">Day 5</option>
+        <option value="6">Day 6</option>
+        <option value="7">Day 7</option>
+        <option value="8">Day 8</option>
+        <option value="9">Day 9</option>
+        <option value="10">Day 10</option>
       </select>
-      <button class="btn btn-ghost btn-sm" id="f-clear">Clear</button>
+      <select id="filterStage" class="day-select" onchange="renderAll()">
+        <option value="">All Stages</option>
+        <option value="collect">01 · Collect Data</option>
+        <option value="prep">02 · Prep Work</option>
+        <option value="calc">03 · Calculate Charges</option>
+        <option value="quality">04 · Quality Check</option>
+        <option value="bill">05 · Bill Residents</option>
+        <option value="recovery">06 · Recovery</option>
+        <option value="comms">Customer Comms</option>
+        <option value="__none__">— None / Foundational</option>
+      </select>
     </div>
-
-    <div class="table-scroll">
-      <table id="content-table">
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Cornerstone</th>
-            <th>Pathway</th>
-            <th>Modality</th>
-            <th>Status</th>
-            <th>Due</th>
-            <th>Health</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <p class="empty" id="content-empty" hidden>Nothing matches those filters.</p>
-  </section>
-</section>
-
-<!-- ===================== DECISIONS ===================== -->
-<section class="view" id="view-decisions">
-  <p class="src-banner">Everything on this tab is read from the Monday board and shown exactly as written there. Nothing is summarised or reworded. To change a decision, change it in Monday.</p>
-
-  <section class="card">
-    <h2>Needs a decision <span class="hcount" id="dec-needs-count">0</span></h2>
-    <p class="card-note">Open, In Discussion, or Ready to Confirm.</p>
-    <div class="accordion" id="dec-needs"></div>
-  </section>
-
-  <section class="card">
-    <h2>Decided <span class="hcount" id="dec-closed-count">0</span></h2>
-    <p class="card-note">Settled. Not reopening.</p>
-    <div class="accordion" id="dec-closed"></div>
-  </section>
-
-  <section class="card">
-    <h2>Deferred / Parking Lot <span class="hcount" id="dec-parked-count">0</span></h2>
-    <p class="card-note">Consciously postponed, not forgotten.</p>
-    <div class="accordion" id="dec-parked"></div>
-  </section>
-</section>
-
-<!-- ===================== GUARD RAILS ===================== -->
-<section class="view" id="view-guardrails">
-  <section class="card">
-    <h2>Guard rails</h2>
-    <p class="card-note">The rules that keep Foundations universal. Use these when a department asks for their content in the universal program.</p>
-    <div id="guardrails"></div>
-    <p class="standing-test">Standing test for any proposed addition: would we still teach this if the learner were going into a completely different department? If not, it belongs in that pathway&rsquo;s program.</p>
-  </section>
-  <section class="card">
-    <h2>Naming layer</h2>
-    <p class="card-note">Foundations teaches the public vocabulary with internal names attached underneath. Write &ldquo;Expense Management (Synergy)&rdquo; rather than choosing one.</p>
-    <div class="table-scroll">
-      <table id="vocab-table">
-        <thead><tr><th>Public name</th><th>Internal name</th><th>What it is</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </section>
-</section>
-
-<!-- ===================== RESOURCES ===================== -->
-<section class="view" id="view-resources">
-  <section class="card">
-    <h2>Source documents</h2>
-    <p class="card-note">Where the real detail lives.</p>
-    <ul class="res-list" id="resources"></ul>
-  </section>
-  <section class="card">
-    <h2>Data</h2>
-    <div id="sync-share" class="sync-info"></div>
-    <div id="sync-info" class="sync-info"></div>
-    <p class="card-note">Task data syncs from Monday each weekday morning and is read-only. Content added through the dashboard is saved to a shared Google Sheet, so every stakeholder sees the same list. If two people edit at the same moment, the last save wins.</p>
-  </section>
-</section>
+    <div id="allContent" class="all-content-list"></div>
+  </div>
 
 </main>
 
-<footer class="wrap site-footer">
-  <p id="footer-line"></p>
-</footer>
-
-<!-- ===================== ADD / EDIT MODAL ===================== -->
-<div class="modal-backdrop" id="modal" hidden>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <div class="modal-head">
-      <h2 id="modal-title">Add Content</h2>
-      <button class="icon-btn" id="modal-close" aria-label="Close">&times;</button>
+<!-- ADD/EDIT MODAL -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <h2 id="modalTitle">Add Content</h2>
+    <div class="modal-sub" id="modalSub">Add a new module to the program.</div>
+    <div class="form-grid">
+      <div class="form-field full">
+        <label>Module / Session Name *</label>
+        <input type="text" id="f-name" placeholder="e.g. Bill Dates — The Expert Check">
+      </div>
+      <div class="form-field">
+        <label>Day *</label>
+        <select id="f-day">
+          <option value="1">Day 1</option>
+          <option value="2">Day 2</option>
+          <option value="3">Day 3</option>
+          <option value="4">Day 4</option>
+          <option value="5">Day 5</option>
+          <option value="6">Day 6</option>
+          <option value="7">Day 7</option>
+          <option value="8">Day 8</option>
+          <option value="9">Day 9</option>
+          <option value="10">Day 10</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Estimated Minutes</label>
+        <input type="number" id="f-mins" min="0" step="5" value="0">
+      </div>
+      <div class="form-field">
+        <label>Content Type</label>
+        <select id="f-ct">
+          <option value="Undetermined" selected>Undetermined</option>
+          <option value="ILT">ILT</option>
+          <option value="Blended">Blended</option>
+          <option value="eLearning">eLearning</option>
+          <option value="Simulation">Simulation</option>
+          <option value="Activity">Activity</option>
+          <option value="OTJ">OTJ</option>
+          <option value="Assessment">Assessment</option>
+          <option value="Video">Video</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Lifecycle Stage</label>
+        <select id="f-stage">
+          <option value="">— None / Foundational —</option>
+          <option value="collect">01 · Collect Data</option>
+          <option value="prep">02 · Prep Work</option>
+          <option value="calc">03 · Calculate Charges</option>
+          <option value="quality">04 · Quality Check</option>
+          <option value="bill">05 · Bill Residents</option>
+          <option value="recovery">06 · Recovery</option>
+          <option value="comms">Customer Communication (cross-cutting)</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Status</label>
+        <select id="f-status">
+          <option value="ns">Not Started</option>
+          <option value="ip">In Development</option>
+          <option value="rv">In Review</option>
+          <option value="r1">Revisions 1</option>
+          <option value="r2">Revisions 2</option>
+          <option value="r3">Revisions 3</option>
+          <option value="fr">Final Review</option>
+          <option value="cp">Complete</option>
+          <option value="oh">On Hold</option>
+          <option value="cn">Cancelled</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Design Start</label>
+        <input type="date" id="f-dstart">
+      </div>
+      <div class="form-field">
+        <label>Design End (anticipated)</label>
+        <input type="date" id="f-dend">
+      </div>
+      <div class="form-field">
+        <label>Design End (actual)</label>
+        <input type="date" id="f-dendActual">
+        <div class="form-help" style="font-size:10.5px;color:var(--navy-mid);margin-top:3px;">Set the day design actually finished. This becomes the review "Date Sent" and starts the review window.</div>
+      </div>
+      <div class="form-field">
+        <label>Review Close (override)</label>
+        <input type="date" id="f-revclose">
+        <div class="form-help" style="font-size:10.5px;color:var(--navy-mid);margin-top:3px;">Auto-computed as Design End (actual) + 7 business days (Design Team SOP). Set here to override.</div>
+      </div>
+      <div class="form-field full">
+        <label>Google Drive Link (optional)</label>
+        <input type="url" id="f-link" placeholder="https://drive.google.com/...">
+      </div>
+      <div class="form-field full">
+        <label>Learner Outcome</label>
+        <textarea id="f-outcome" placeholder="What the learner will be able to do..."></textarea>
+      </div>
+      <div class="form-field full">
+        <label>Decisions the Learner Must Make</label>
+        <textarea id="f-decisions"></textarea>
+      </div>
+      <div class="form-field">
+        <label>Systems / Tools</label>
+        <input type="text" id="f-systems" placeholder="e.g. YODA, Skywalker">
+      </div>
+      <div class="form-field">
+        <label>Artifact 1</label>
+        <input type="text" id="f-a1" placeholder="e.g. Facilitator Guide">
+      </div>
+      <div class="form-field">
+        <label>Artifact 2</label>
+        <input type="text" id="f-a2">
+      </div>
+      <div class="form-field">
+        <label>Artifact 3</label>
+        <input type="text" id="f-a3">
+      </div>
+      <div class="form-field full">
+        <label>Notes</label>
+        <textarea id="f-notes"></textarea>
+      </div>
     </div>
-    <div class="modal-body">
-      <p class="share-note" id="share-note"></p>
-
-      <label>Module / session name <span class="req">*</span>
-        <input type="text" id="m-name">
-      </label>
-
-      <div class="field-row">
-        <label>Cornerstone
-          <select id="m-cornerstone"></select>
-        </label>
-        <label>Pathway
-          <select id="m-pathway"></select>
-        </label>
+    <div class="modal-actions">
+      <button class="btn danger" id="modalDeleteBtn" onclick="deleteModule()" style="display:none;">Delete</button>
+      <div style="flex:1;"></div>
+      <div class="modal-actions-right">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn solid" onclick="saveModule()" id="modalSaveBtn">Save</button>
       </div>
-
-      <div class="field-row">
-        <label>Modality
-          <select id="m-modality"></select>
-        </label>
-        <label>Status
-          <select id="m-status"></select>
-        </label>
-      </div>
-
-      <div class="field-row">
-        <label>New or existing
-          <select id="m-newexisting"></select>
-        </label>
-        <label>Estimated minutes
-          <input type="number" id="m-minutes" min="0" step="5">
-        </label>
-      </div>
-
-      <div class="field-row">
-        <label>Design start
-          <input type="date" id="m-start">
-        </label>
-        <label>Target due date
-          <input type="date" id="m-due">
-        </label>
-      </div>
-
-      <div class="field-row">
-        <label>Owner / designer
-          <input type="text" id="m-owner">
-        </label>
-        <label>SME / stakeholder
-          <input type="text" id="m-sme">
-        </label>
-      </div>
-
-      <label>Learner outcome
-        <textarea id="m-outcome" rows="2" placeholder="What the learner can do afterwards"></textarea>
-      </label>
-
-      <label>Link (Drive, Rise, anywhere)
-        <input type="url" id="m-link" placeholder="https://">
-      </label>
-
-      <label>Notes
-        <textarea id="m-notes" rows="3"></textarea>
-      </label>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-danger btn-sm" id="m-delete" hidden>Delete</button>
-      <span class="spacer"></span>
-      <button class="btn btn-ghost" id="m-cancel">Cancel</button>
-      <button class="btn btn-primary" id="m-save">Save</button>
     </div>
   </div>
 </div>
 
-<div class="toast" id="toast" hidden></div>
+<div class="toast" id="toast"></div>
 
-<script src="program.js"></script>
-<script src="app.js"></script>
+<script>
+// ===== BUILT-IN SCAFFOLD DATA (88 modules) =====
+// ===== SCAFFOLD (empty — board starts blank, populate via Add Content) =====
+const SCAFFOLD = [];
+
+const DAY_BUDGET = 540;
+
+
+// ===== STATE =====
+let modules = [];
+let baseModules = [];
+let overlays = {
+  added: [],
+  edits: {},
+  deleted: [],
+  order: {},
+  comments: {},
+  agenda: {}
+};
+const STORAGE_KEY = 'billing-el-overlays-v1';
+
+/* ===== GOOGLE SHEET SYNC =====
+   Paste your Apps Script Web App URL between the quotes below.
+   It looks like: https://script.google.com/macros/s/XXXXXXXX/exec
+   If left empty, the dashboard falls back to browser-only storage. */
+const SYNC_URL = 'https://script.google.com/macros/s/AKfycbyfKsuun7hE3nYKhv6W-VLTXGLwfvr85bfIVOFnueG_7-QPc_kqNhbRzeLflDGo5JA/exec';
+
+let editingId = null;
+
+const DEFAULT_AGENDA = {
+  startTime: "8:00",
+  endTime: "5:00",
+  lunchAfter: 240,
+  lunchDuration: 60,
+  breaks: [],
+  otjMinutes: 90
+};
+
+const STAGE_INFERENCE = [
+  { re: /submeter|meter concept|meter estim|meter read|reading|abp|import|initial read|prop cons|v3 report/i, s: 'prep' },
+  { re: /provider bill|prep|fusion|data entry|holding spread|distinguish/i, s: 'prep' },
+  { re: /bill date|billing method|billing math|utility amount|\bua\b|rate|calc|calculation|ramping|rent-only|methodolog|fee screen|mimo|stats|billing process/i, s: 'calc' },
+  { re: /qc|quality|handback|documentation|note standard|good note|bad note|good documentation/i, s: 'quality' },
+  { re: /prebill|utility message|export|bill residents|customer service fundamental|csr/i, s: 'bill' },
+  { re: /recovery|u exception/i, s: 'recovery' },
+  { re: /exception|exception note/i, s: 'quality' },
+  { re: /report|reports/i, s: 'quality' },
+  { re: /client comm|client email|professional email|mock email|bob tenet|grading rubric/i, s: 'comms' },
+];
+
+function stableId(m) {
+  const key = `d${m.d}-${(m.n||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,40)}`;
+  return key;
+}
+function newId() {
+  return 'u-' + Math.random().toString(36).slice(2, 10);
+}
+
+function applyOverlayData(raw) {
+  const parsed = (typeof raw === 'string') ? JSON.parse(raw) : raw;
+  overlays = Object.assign({added:[],edits:{},deleted:[],order:{},comments:{},agenda:{}}, parsed);
+}
+
+function loadLocalOverlays() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) applyOverlayData(raw);
+  } catch(e) {
+    console.warn('local overlay load failed', e);
+  }
+}
+
+async function loadOverlays() {
+  // Local copy first so the page renders instantly even if the Sheet is slow.
+  loadLocalOverlays();
+  if (!SYNC_URL) return;
+  try {
+    const res = await fetch(SYNC_URL, { method: 'GET' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    if (text && text.trim() && text.trim() !== '{}') {
+      applyOverlayData(text);
+      // Keep the local cache in step with the Sheet.
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(overlays));
+    }
+  } catch(e) {
+    console.warn('sheet load failed, using local copy', e);
+    showToast('Could not reach Google Sheet — showing local copy');
+  }
+}
+
+let syncTimer = null;
+function saveOverlays() {
+  // Always save locally right away.
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(overlays));
+  } catch(e) {
+    console.warn('local overlay save failed', e);
+  }
+  if (!SYNC_URL) return;
+  // Wait a moment before pushing to the Sheet so rapid edits become one save.
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(pushToSheet, 1200);
+}
+
+async function pushToSheet() {
+  try {
+    // text/plain avoids a CORS preflight, which Apps Script does not support.
+    const res = await fetch(SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(overlays)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    setSyncBadge('Saved to Sheet');
+  } catch(e) {
+    console.warn('sheet save failed', e);
+    showToast('Sync failed — change saved on this computer only');
+  }
+}
+
+function setSyncBadge(msg) {
+  // Quiet confirmation in the console; toast only on problems.
+  console.log('[sync]', msg, new Date().toLocaleTimeString());
+}
+
+function rebuildModules() {
+  const withIds = SCAFFOLD.map(m => ({...m, id: stableId(m), _base: true}));
+  const kept = withIds.filter(m => !overlays.deleted.includes(m.id));
+  const merged = kept.map(m => {
+    const e = overlays.edits[m.id];
+    return e ? {...m, ...e, id: m.id, _base: true} : m;
+  });
+  const added = (overlays.added || []).map(m => ({...m, _base: false}));
+  baseModules = [...merged, ...added];
+  modules = baseModules;
+}
+
+function orderedForDay(day) {
+  const list = modules.filter(m => m.d === day);
+  const orderIds = overlays.order[day];
+  if (!orderIds || !orderIds.length) return list;
+  const byId = new Map(list.map(m => [m.id, m]));
+  const ordered = [];
+  orderIds.forEach(id => { if (byId.has(id)) { ordered.push(byId.get(id)); byId.delete(id); } });
+  byId.forEach(m => ordered.push(m));
+  return ordered;
+}
+
+function orderedAll() {
+  const days = [1,2,3,4,5,6,7,8,9,10];
+  return days.flatMap(d => orderedForDay(d));
+}
+
+// ===== HASH-BASED TAB ROUTING =====
+// Each tab has its own shareable URL fragment.
+const VIEW_TO_HASH = {
+  tracker: 'dashboard',
+  overview: 'overview',
+  day: 'content-details',
+  all: 'master-list',
+  week: 'week'
+};
+const HASH_TO_VIEW = Object.fromEntries(Object.entries(VIEW_TO_HASH).map(([k, v]) => [v, k]));
+
+function showView(v, opts) {
+  opts = opts || {};
+  document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  const viewEl = document.getElementById('view-' + v);
+  const tabEl = document.querySelector(`.tab[data-view="${v}"]`);
+  if (!viewEl) return;
+  viewEl.classList.add('active');
+  if (tabEl) tabEl.classList.add('active');
+  if (v === 'overview') renderOverview();
+  if (v === 'tracker') renderTracker();
+  if (v === 'week') renderWeek();
+  if (v === 'day') renderDay();
+  if (v === 'all') renderAll();
+  // Update URL hash so the tab is directly shareable, unless we're already
+  // reacting to a hashchange (to prevent infinite loops).
+  if (!opts.fromHash) {
+    const targetHash = VIEW_TO_HASH[v] || '';
+    if (targetHash && ('#' + targetHash) !== window.location.hash) {
+      history.replaceState(null, '', '#' + targetHash);
+    }
+  }
+}
+
+function applyHashRoute() {
+  const raw = (window.location.hash || '').replace(/^#/, '').trim().toLowerCase();
+  const view = HASH_TO_VIEW[raw];
+  if (view) showView(view, {fromHash: true});
+}
+
+window.addEventListener('hashchange', applyHashRoute);
+
+// ===== STATUS =====
+function getStatus(m) {
+  if (m.st && ['ns','ip','rv','r1','r2','r3','fr','cp','oh','cn'].includes(m.st)) return m.st;
+  if (m.dr === 0) return 'cp';
+  if (m.dr === 1) return 'ns';
+  return 'ns';
+}
+function statusLabel(s) {
+  return {ns:'Not Started', ip:'In Development', rv:'In Review', r1:'Revisions 1', r2:'Revisions 2', r3:'Revisions 3', fr:'Final Review', cp:'Complete', oh:'On Hold', cn:'Cancelled'}[s] || s;
+}
+function stageKey(m) {
+  if (m.stage) return m.stage;
+  const hay = ((m.n||'') + ' ' + (m.nt||'')).toLowerCase();
+  for (const r of STAGE_INFERENCE) if (r.re.test(hay)) return r.s;
+  return '';
+}
+function stageClass(m) {
+  const s = stageKey(m);
+  return s ? 'stage-' + s : '';
+}
+function stageChip(m) {
+  const s = stageKey(m);
+  if (!s) return `<span class="stage-chip stage-none" title="No lifecycle stage">Foundational</span>`;
+  const map = {
+    collect: {n:'01 Collect', c:'stage-collect'},
+    prep:    {n:'02 Prep',    c:'stage-prep'},
+    calc:    {n:'03 Calc',    c:'stage-calc'},
+    quality: {n:'04 QC',      c:'stage-quality'},
+    bill:    {n:'05 Bill',    c:'stage-bill'},
+    recovery:{n:'06 Recov',   c:'stage-recovery'},
+    comms:   {n:'Comms',      c:'stage-comms'},
+  };
+  const it = map[s]; if (!it) return '';
+  return `<span class="stage-chip ${it.c}" title="${it.n}">${it.n}</span>`;
+}
+function statusPill(m) {
+  const s = getStatus(m);
+  return `<span class="status-pill ${s}" title="${statusLabel(s)}"><span class="dot"></span>${statusLabel(s)}</span>`;
+}
+function statusPillClickable(m) {
+  const s = getStatus(m);
+  return `<span class="status-pill ${s} clickable" title="Click to cycle status" onclick="event.stopPropagation(); cycleStatus('${m.id}')"><span class="dot"></span>${statusLabel(s)}</span>`;
+}
+function cycleStatus(id) {
+  // Linear flow: Not Started → In Development → In Review → Revisions 1 →
+  // Revisions 2 → Revisions 3 → Final Review → Complete → (loop). oh and cn
+  // rejoin the flow at In Development / Not Started respectively.
+  const cycle = {ns:'ip', ip:'rv', rv:'r1', r1:'r2', r2:'r3', r3:'fr', fr:'cp', cp:'ns', oh:'ip', cn:'ns'};
+  const m = modules.find(x => x.id === id);
+  if (!m) return;
+  const cur = getStatus(m);
+  const next = cycle[cur] || 'ns';
+  overlays.edits[id] = overlays.edits[id] || {};
+  overlays.edits[id].st = next;
+  // Keep revLevel in sync when manually moving into a revision status so the
+  // auto-flip system knows which round we're on next time.
+  if (next === 'r1') overlays.edits[id].revLevel = Math.max(1, m.revLevel || 0);
+  else if (next === 'r2') overlays.edits[id].revLevel = Math.max(2, m.revLevel || 0);
+  else if (next === 'r3') overlays.edits[id].revLevel = Math.max(3, m.revLevel || 0);
+  // When flipping into any stakeholder-facing review state (rv or fr), stamp
+  // today's date as "sent" so the review window auto-populates
+  // (sent + 5 biz days = due). fr resets the window since it's a new review round.
+  if (next === 'rv' || next === 'fr') {
+    const t = new Date();
+    const iso = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
+    if (next === 'fr') {
+      // Final Review is a fresh review window. Restamp BOTH dend and dendActual
+      // (reviewInfo prefers dendActual, so stamping only dend leaves stale data
+      // in the sent-date field and the auto-flip system then treats the fresh
+      // review as already past its window). Also clear any manual close-date
+      // override so the 7-business-day auto-window applies.
+      overlays.edits[id].dend = iso;
+      overlays.edits[id].dendActual = iso;
+      overlays.edits[id].revclose = '';
+    } else {
+      const merged = Object.assign({}, m, overlays.edits[id]);
+      if (!merged.dend) overlays.edits[id].dend = iso;
+    }
+  }
+  saveOverlays();
+  rebuildModules();
+  const activeTab = document.querySelector('.tab.active').dataset.view;
+  showView(activeTab);
+  showToast(`Status → ${statusLabel(next)}`);
+}
+
+// ===== AUTO-FLIP: STAKEHOLDER REVIEW WINDOW EXPIRED =====
+// When a module's stakeholder review window (rv or fr) closes at EOD, it
+// auto-flips back into the design queue at the next revision level.
+// revLevel tracks how many revision rounds a module has already touched
+// (0 = never revised, 1 = touched r1, 2 = touched r2, 3 = touched r3/capped).
+// On flip, revLevel increments (capped at 3) and status becomes r{revLevel}.
+// Timestamp of the flip is stored on the overlay so the "With Design" widget
+// can surface it as "just returned from review."
+function runAutoFlip() {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let flipped = 0;
+  modules.forEach(m => {
+    const st = getStatus(m);
+    if (st !== 'rv' && st !== 'fr') return;
+    const info = reviewInfo(m);
+    if (!info.due) return;
+    // Anything whose due date is BEFORE today (i.e. due date already ended
+    // at midnight last night) is expired and flips.
+    const dueEnd = new Date(info.due.getFullYear(), info.due.getMonth(), info.due.getDate() + 1);
+    if (now < dueEnd) return;
+    // Bump revision level, cap at 3.
+    const currentLevel = m.revLevel || 0;
+    const nextLevel = Math.min(currentLevel + 1, 3);
+    const nextStatus = 'r' + nextLevel;
+    overlays.edits[m.id] = overlays.edits[m.id] || {};
+    overlays.edits[m.id].st = nextStatus;
+    overlays.edits[m.id].revLevel = nextLevel;
+    // Stamp the flip so we can show "returned" recency badge.
+    overlays.edits[m.id].returnedAt = todayStart.getFullYear() + '-' +
+      String(todayStart.getMonth()+1).padStart(2,'0') + '-' +
+      String(todayStart.getDate()).padStart(2,'0');
+    flipped++;
+  });
+  if (flipped > 0) {
+    saveOverlays();
+    rebuildModules();
+    console.log('[auto-flip]', flipped, 'module(s) returned to design queue');
+  }
+  return flipped;
+}
+
+function capacityClass(mins) {
+  const pct = mins / DAY_BUDGET;
+  if (pct > 1) return 'cap-over';
+  if (pct >= 0.95) return 'cap-full';
+  if (pct >= 0.75) return 'cap-hot';
+  if (pct >= 0.5) return 'cap-warm';
+  return 'cap-cool';
+}
+
+function dayStatus(mins) {
+  if (mins > DAY_BUDGET) return {cls: 'over', text: 'Over Budget'};
+  if (mins >= DAY_BUDGET * 0.9) return {cls: 'full', text: 'Nearly Full'};
+  return {cls: 'under', text: 'Available'};
+}
+function esc(s) {
+  return (s || '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
+
+// ===== OVERVIEW =====
+function renderOverview() {
+  const total = modules.length;
+  const totalMins = modules.reduce((s, m) => s + m.m, 0);
+  const totalHours = (totalMins / 60).toFixed(1);
+  const statusCounts = {ns:0, ip:0, rv:0, r1:0, r2:0, r3:0, fr:0, cp:0, oh:0, cn:0};
+  modules.forEach(m => statusCounts[getStatus(m)]++);
+  const cpPct = total ? Math.round((statusCounts.cp / total) * 100) : 0;
+  // In-flight = anything actively being worked on or reviewed (not started/hold/cancel/done are excluded)
+  const ipRv = statusCounts.ip + statusCounts.rv + statusCounts.r1 + statusCounts.r2 + statusCounts.r3 + statusCounts.fr;
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi">
+      <div class="kpi-label">Total Modules</div>
+      <div class="kpi-value">${total}</div>
+      <div class="kpi-sub">${totalHours} hours designed</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Not Started</div>
+      <div class="kpi-value">${statusCounts.ns}</div>
+      <div class="kpi-sub">awaiting design</div>
+    </div>
+    <div class="kpi ${statusCounts.cp > 0 ? 'good' : ''}">
+      <div class="kpi-label">Complete</div>
+      <div class="kpi-value">${statusCounts.cp}</div>
+      <div class="kpi-sub">${cpPct}% of program</div>
+    </div>
+    <div class="kpi ${ipRv > 0 ? 'warn' : ''}">
+      <div class="kpi-label">In Progress</div>
+      <div class="kpi-value">${ipRv}</div>
+      <div class="kpi-sub">${statusCounts.ip} dev · ${statusCounts.rv} review</div>
+    </div>
+  `;
+
+  const w1 = [1,2,3,4,5].map(d => renderDayCard(d)).join('');
+  const w2 = [6,7,8,9,10].map(d => renderDayCard(d)).join('');
+  const w1Collapsed = localStorage.getItem('weekCollapsed_1') === '1';
+  const w2Collapsed = localStorage.getItem('weekCollapsed_2') === '1';
+  document.getElementById('dayGrid').innerHTML = `
+    <div class="week-section week-1 ${w1Collapsed ? 'collapsed' : ''}">
+      <div class="week-section-header" onclick="toggleWeekSection(1)">
+        <span class="rail"></span>
+        <span>Week 1 · Days 1–5</span>
+        <span class="ws-caret">▾</span>
+      </div>
+      <div class="day-grid">${w1}</div>
+    </div>
+    <div class="week-section week-2 ${w2Collapsed ? 'collapsed' : ''}">
+      <div class="week-section-header" onclick="toggleWeekSection(2)">
+        <span class="rail"></span>
+        <span>Week 2 · Days 6–10</span>
+        <span class="ws-caret">▾</span>
+      </div>
+      <div class="day-grid">${w2}</div>
+    </div>
+  `;
+}
+
+function toggleWeekSection(weekNum) {
+  const section = document.querySelector(`.week-section.week-${weekNum}`);
+  if (!section) return;
+  section.classList.toggle('collapsed');
+  const isCollapsed = section.classList.contains('collapsed');
+  localStorage.setItem(`weekCollapsed_${weekNum}`, isCollapsed ? '1' : '0');
+}
+
+function renderDayCard(day) {
+  const dayMods = modules.filter(m => m.d === day);
+  const mins = dayMods.reduce((s, m) => s + m.m, 0);
+  const pct = Math.min((mins / DAY_BUDGET) * 100, 100);
+  const ds = dayStatus(mins);
+  const capCls = capacityClass(mins);
+  const week = day <= 5 ? 1 : 2;
+  const totalCount = dayMods.length;
+  const bubblesHtml = dayMods.slice(0, 14).map(m => {
+    const s = getStatus(m);
+    return `<span class="day-status-bubble ${s}" title="${esc(m.n)} — ${statusLabel(s)}"></span>`;
+  }).join('');
+  const overflow = dayMods.length > 14 ? `<span class="day-status-overflow">+${dayMods.length-14}</span>` : '';
+  const capIcon = mins >= DAY_BUDGET * 0.95 && mins <= DAY_BUDGET
+    ? '<span class="cap-icon" title="Nearly full">✓</span>'
+    : (mins > DAY_BUDGET ? '<span class="cap-icon over" title="Over budget">!</span>' : '');
+  const statusRowHtml = totalCount === 0
+    ? '<div class="day-progress-empty">No content yet</div>'
+    : `
+      <div class="day-status-row">
+        <span class="label">Status</span>
+        <span class="day-status-bubbles">${bubblesHtml}${overflow}</span>
+      </div>
+    `;
+  return `
+    <div class="day-card week-${week}" onclick="goToDay(${day})">
+      <div class="day-card-header">
+        <div><h3>Day ${day}${capIcon}</h3><span class="week-badge">Week ${week}</span></div>
+        <span class="day-status ${ds.cls}">${ds.text}</span>
+      </div>
+      <div class="day-card-bar"><div class="day-card-bar-fill ${capCls}" style="width: ${pct}%"></div></div>
+      <div class="day-card-meta">
+        <span><strong>${dayMods.length}</strong> module${dayMods.length===1?'':'s'}</span>
+        <span><strong>${mins}</strong>m / ${DAY_BUDGET}m</span>
+      </div>
+      ${statusRowHtml}
+    </div>
+  `;
+}
+
+function renderWeek() {
+  const html = [];
+  const w1 = [1,2,3,4,5];
+  const w2 = [6,7,8,9,10];
+  const buildCard = (day) => {
+    const dayMods = modules.filter(m => m.d === day);
+    const mins = dayMods.reduce((s,m) => s + m.m, 0);
+    const capCls = capacityClass(mins);
+    const week = day <= 5 ? 1 : 2;
+    return `
+      <div class="day-card week-${week}" onclick="goToDay(${day})">
+        <div class="day-card-header"><h3>Day ${day}</h3></div>
+        <div class="day-card-bar"><div class="day-card-bar-fill ${capCls}" style="width:${Math.min((mins/DAY_BUDGET)*100,100)}%"></div></div>
+        <div class="day-card-meta"><span><strong>${dayMods.length}</strong> modules</span><span><strong>${mins}</strong>m</span></div>
+      </div>`;
+  };
+  html.push(`<div class="week-card"><h2 data-week="Week 1">Week 1 <span class="week-sub">· Days 1–5 · Foundation</span></h2><div class="week-days">${w1.map(buildCard).join('')}</div></div>`);
+  html.push(`<div class="week-card week-2"><h2 data-week="Week 2">Week 2 <span class="week-sub">· Days 6–10 · Application</span></h2><div class="week-days">${w2.map(buildCard).join('')}</div></div>`);
+  document.getElementById('weekContent').innerHTML = html.join('');
+}
+
+function goToDay(day) {
+  // Content Details is now stage-primary. Opening a day sets the day filter
+  // and picks the first stage that has content on that day, so the view
+  // opens on something meaningful rather than an empty selection.
+  const dayMods = modules.filter(m => m.d === day);
+  const stagesOnDay = [...new Set(dayMods.map(m => stageKey(m) || '__none__'))];
+  const stageOrder = ['collect','prep','calc','quality','bill','recovery','comms','__none__'];
+  const firstStage = stageOrder.find(s => stagesOnDay.includes(s)) || 'collect';
+  document.getElementById('dayStageSelect').value = firstStage;
+  document.getElementById('daySelect').value = day;
+  showView('day');
+}
+function goToModule(id, day) {
+  const m = modules.find(x => x.id === id);
+  const stage = m ? (stageKey(m) || '__none__') : 'collect';
+  document.getElementById('dayStageSelect').value = stage;
+  // Clear the day filter so the module is visible in its stage regardless of day.
+  document.getElementById('daySelect').value = '';
+  showView('day');
+  setTimeout(() => {
+    const el = document.querySelector(`.module-card[data-id="${id}"]`);
+    if (!el) return;
+    el.scrollIntoView({behavior: 'smooth', block: 'center'});
+    el.style.transition = 'box-shadow 0.5s ease';
+    const prev = el.style.boxShadow;
+    el.style.boxShadow = '0 0 0 3px rgba(240,180,41,0.65), 0 12px 40px rgba(240,180,41,0.35)';
+    setTimeout(() => { el.style.boxShadow = prev; }, 2000);
+  }, 120);
+}
+
+// ===== ROUTE (TRACKER) =====
+let routeOpenDays = new Set();
+let routeOpenStages = new Set();
+
+function toggleRouteDay(day) {
+  if (routeOpenDays.has(day)) routeOpenDays.delete(day);
+  else routeOpenDays.add(day);
+  renderTracker();
+}
+function toggleRouteStage(sk) {
+  if (routeOpenStages.has(sk)) routeOpenStages.delete(sk);
+  else routeOpenStages.add(sk);
+  renderTracker();
+}
+
+function markReviewComplete(id) {
+  const m = modules.find(x => x.id === id);
+  if (!m) return;
+  overlays.edits[id] = overlays.edits[id] || {};
+  overlays.edits[id].st = 'cp';
+  saveOverlays();
+  rebuildModules();
+  const activeTab = document.querySelector('.tab.active').dataset.view;
+  showView(activeTab);
+  showToast(`✔ ${m.n.slice(0, 40)}${m.n.length > 40 ? '…' : ''} → Complete`);
+}
+
+function renderTracker() {
+  const days = [1,2,3,4,5,6,7,8,9,10];
+  const perDay = days.map(d => {
+    const dayMods = modules.filter(m => m.d === d);
+    const total = dayMods.length;
+    const divisor = total || 1; // guard against divide-by-zero in percentages only
+    const counts = {ns:0, ip:0, rv:0, r1:0, r2:0, r3:0, fr:0, cp:0, oh:0, cn:0};
+    dayMods.forEach(m => counts[getStatus(m)]++);
+    const inFlight = counts.ip + counts.rv + counts.r1 + counts.r2 + counts.r3 + counts.fr;
+    const cpPct = (counts.cp / divisor) * 100;
+    const ipRvPct = (inFlight / divisor) * 100;
+    let cls = 'pending', pill = 'pending', pillLabel = 'Not Started';
+    if (total > 0 && counts.cp === total) { cls = 'done'; pill = 'done'; pillLabel = 'Complete'; }
+    else if (counts.cp + inFlight > 0) { cls = 'active'; pill = 'active'; pillLabel = 'In Progress'; }
+    else if (total === 0) { pillLabel = 'Empty'; }
+    return {d, total, counts, cpPct, ipRvPct, cls, pill, pillLabel};
+  });
+
+  const totalMods = modules.length;
+  const overallCounts = {ns:0, ip:0, rv:0, r1:0, r2:0, r3:0, fr:0, cp:0, oh:0, cn:0};
+  modules.forEach(m => overallCounts[getStatus(m)]++);
+  const overallInFlight = overallCounts.ip + overallCounts.rv + overallCounts.r1 + overallCounts.r2 + overallCounts.r3 + overallCounts.fr;
+  const overallCpPct = totalMods ? (overallCounts.cp / totalMods) * 100 : 0;
+  const overallIpRvPct = totalMods ? (overallInFlight / totalMods) * 100 : 0;
+  const overallProgressPct = Math.round(overallCpPct + overallIpRvPct);
+  const overallCpRounded = Math.round(overallCpPct);
+
+  const stagesDef = [
+    {num: '01', label: 'Analyze',   sub: 'Needs, learners, constraints'},
+    {num: '02', label: 'Design',    sub: 'Objectives, structure, blueprint'},
+    {num: '03', label: 'Develop',   sub: 'Materials built & reviewed'},
+    {num: '04', label: 'Implement', sub: 'Delivered to facilitators'},
+    {num: '05', label: 'Evaluate',  sub: 'Outcomes measured, iterated'}
+  ];
+
+  // Analyze is complete (foundational research done). Design is active until
+  // most modules are complete. Develop takes over once bulk of content ships.
+  let currentStageIdx = 1; // Design
+  if (overallCpPct >= 100) currentStageIdx = 4;      // Evaluate
+  else if (overallCpPct >= 75) currentStageIdx = 3;  // Implement
+  else if (overallCpPct >= 25) currentStageIdx = 2;  // Develop
+
+  const stagesHtml = stagesDef.map((s, idx) => {
+    let cls = '';
+    let badge = '';
+    if (idx < currentStageIdx) { cls = 'done'; badge = '<div class="route-stage-badge">Complete</div>'; }
+    else if (idx === currentStageIdx) { cls = 'active'; badge = '<div class="route-stage-badge">In Progress</div>'; }
+    return `
+      <div class="route-stage ${cls}">
+        ${badge}
+        <div class="route-stage-num">${s.num}</div>
+        <div class="route-stage-label">${s.label}</div>
+        <div class="route-stage-sub">${s.sub}</div>
+      </div>
+    `;
+  }).join('');
+
+  // ===== BY LIFECYCLE STAGE (replaces day-by-day) =====
+  // Groups modules by lifecycle stage rather than day so stakeholders read
+  // "this is where content sits in the billing lifecycle" instead of "this
+  // is what's on day X" (which reads as locked-in placement).
+  const stageOrder = ['collect','prep','calc','quality','bill','recovery','comms','__none__'];
+  const stageMeta = {
+    collect: {n:'01 Collect Data',      c:'stage-collect'},
+    prep:    {n:'02 Prep Work',         c:'stage-prep'},
+    calc:    {n:'03 Calculate Charges', c:'stage-calc'},
+    quality: {n:'04 Quality Check',     c:'stage-quality'},
+    bill:    {n:'05 Bill Residents',    c:'stage-bill'},
+    recovery:{n:'06 Recovery',          c:'stage-recovery'},
+    comms:   {n:'Customer Comms',       c:'stage-comms'},
+    __none__:{n:'Foundational / No Stage', c:'stage-none'},
+  };
+  const daysHtml = stageOrder.map(sk => {
+    const stageMods = modules.filter(m => {
+      const k = stageKey(m);
+      if (sk === '__none__') return !k;
+      return k === sk;
+    });
+    if (stageMods.length === 0) return '';
+    const total = stageMods.length;
+    const sCounts = {ns:0, ip:0, rv:0, r1:0, r2:0, r3:0, fr:0, cp:0, oh:0, cn:0};
+    stageMods.forEach(m => sCounts[getStatus(m)]++);
+    const sInFlight = sCounts.ip + sCounts.rv + sCounts.r1 + sCounts.r2 + sCounts.r3 + sCounts.fr;
+    const sCpPct = (sCounts.cp / total) * 100;
+    const sIpPct = (sInFlight / total) * 100;
+    let sCls = 'pending', sPill = 'pending', sPillLabel = 'Not Started';
+    if (sCounts.cp === total) { sCls = 'done'; sPill = 'done'; sPillLabel = 'Complete'; }
+    else if (sCounts.cp + sInFlight > 0) { sCls = 'active'; sPill = 'active'; sPillLabel = 'In Progress'; }
+    const meta = stageMeta[sk];
+    const isOpen = routeOpenStages.has(sk);
+    const caret = isOpen ? '▼' : '▶';
+    // Sort modules inside the stage by day (ascending) then by title for stability.
+    const sortedMods = [...stageMods].sort((a,b) => (a.d - b.d) || a.n.localeCompare(b.n));
+    const modsHtml = isOpen ? `
+      <div class="route-day-mods">
+        ${sortedMods.map(m => {
+          const st = getStatus(m);
+          return `
+            <div class="route-day-mod st-${st}" onclick="event.stopPropagation(); goToModule('${m.id}', ${m.d})" title="Open ${esc(m.n)}">
+              <div class="rdm-title">${esc(m.n)}</div>
+              <div class="rdm-tags">
+                <span class="rdm-day-tag" title="Working day placement (may shift)">Day ${m.d}</span>
+                <span class="rdm-status st-${st}">${statusLabel(st)}</span>
+                <span class="rdm-mins">${m.m}m</span>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    ` : '';
+    return `
+      <div class="route-day route-stage-block ${sCls} ${isOpen ? 'open' : ''}" onclick="toggleRouteStage('${sk}')">
+        <div class="route-day-head">
+          <h4><span class="stage-chip ${meta.c}" style="pointer-events:none;">${meta.n}</span> <span class="rd-caret">${caret}</span></h4>
+          <span class="route-day-pill ${sPill}">${sPillLabel}</span>
+        </div>
+        <div class="route-day-progress">
+          <div class="route-day-progress-ip" style="width: ${sCpPct + sIpPct}%;"></div>
+          <div class="route-day-progress-cp" style="width: ${sCpPct}%;"></div>
+        </div>
+        <div class="route-day-meta">
+          <span>${total} module${total===1?'':'s'} · ${sCounts.cp} done · ${sInFlight} in flight</span>
+          <span class="pct">${Math.round(sCpPct)}%</span>
+        </div>
+        ${modsHtml}
+      </div>
+    `;
+  }).filter(Boolean).join('');
+
+  // ===== THE HANDOFF — modules currently with stakeholders =====
+  // Includes both In Review (rv) and Final Review (fr) modules, since both
+  // are actively sitting with stakeholders and need the same visibility.
+  const reviewMods = modules
+    .filter(m => isInReview(getStatus(m)))
+    .map(m => ({m, info: reviewInfo(m)}))
+    .sort((a, b) => {
+      const aOver = a.info.delta !== null && a.info.delta < 0;
+      const bOver = b.info.delta !== null && b.info.delta < 0;
+      if (aOver !== bOver) return aOver ? -1 : 1;
+      if (a.info.delta === null && b.info.delta !== null) return 1;
+      if (a.info.delta !== null && b.info.delta === null) return -1;
+      if (a.info.delta === null && b.info.delta === null) return a.m.d - b.m.d;
+      return a.info.delta - b.info.delta;
+    });
+
+  const handoffOverdue = reviewMods.filter(x => x.info.delta !== null && x.info.delta < 0).length;
+  const handoffNoDate  = reviewMods.filter(x => x.info.delta === null).length;
+  const handoffActive  = reviewMods.length - handoffOverdue - handoffNoDate;
+
+  const handoffRows = reviewMods.map(({m, info}) => {
+    const isOverdue = info.delta !== null && info.delta < 0;
+    const isNoDate  = info.delta === null;
+    const isLocked  = info.delta === 0;
+    const cls = isOverdue ? 'overdue' : (isNoDate ? 'no-date' : (isLocked ? 'locked' : ''));
+    let daysBig, daysLabel, daysLabelCls = '';
+    if (isNoDate) {
+      daysBig = '—';
+      daysLabel = 'no deadline set';
+    } else if (isOverdue) {
+      daysBig = info.bizOverdue;
+      daysLabel = `business day${info.bizOverdue === 1 ? '' : 's'} overdue`;
+      daysLabelCls = 'overdue';
+    } else if (isLocked) {
+      daysBig = 0;
+      daysLabel = 'closes today';
+    } else {
+      daysBig = info.bizRemaining;
+      daysLabel = `business day${info.bizRemaining === 1 ? '' : 's'} left`;
+    }
+    const isFinal = getStatus(m) === 'fr';
+    const icon = isOverdue ? '⚠' : (isNoDate ? '?' : (isLocked ? '🔒' : (isFinal ? '🚨' : '🚀')));
+    let trackHtml;
+    if (isNoDate) {
+      trackHtml = `<div class="hr-track"><div class="hr-track-empty">No sent or due date on record</div></div>`;
+    } else {
+      const sentStr = info.sent ? fmtDate(info.sent) : '—';
+      const dueStr  = info.due  ? fmtDate(info.due)  : '—';
+      // Urgency thermometer: MORE fill = MORE urgent (consumed / used up).
+      // Length scales against a 7-business-day SLA (Design Team SOP):
+      //   7+ days left → ~10% (small green nub, "fresh")
+      //   5 days left  → ~30% healthy
+      //   3 days left  → ~55% warning
+      //   1 day left   → ~85% critical
+      //   overdue      → 100% red pulsing
+      const SLA_SCALE = 7;
+      const daysRemaining = Math.max(0, info.bizTotal - info.bizFilled);
+      // Consumed = SLA - remaining, clamped 0..SLA
+      const consumed = Math.max(0, Math.min(SLA_SCALE, SLA_SCALE - daysRemaining));
+      const pctRaw = (consumed / SLA_SCALE) * 100;
+      const barPct = Math.max(8, Math.min(100, pctRaw)); // 8% floor keeps a nub visible when fresh
+      let fillClass;
+      if (isOverdue)               fillClass = 'overdue';
+      else if (daysRemaining <= 1) fillClass = 'critical';
+      else if (daysRemaining <= 3) fillClass = 'warning';
+      else                         fillClass = 'healthy';
+      const barTip = isOverdue
+        ? `${info.bizOverdue} business day${info.bizOverdue === 1 ? '' : 's'} past due`
+        : `${daysRemaining} of ${info.bizTotal} business day${info.bizTotal === 1 ? '' : 's'} remaining`;
+      const overshootChip = isOverdue && info.bizOverdue > 0
+        ? `<span class="hr-overshoot">+${info.bizOverdue}d</span>`
+        : '';
+      trackHtml = `
+        <div class="hr-track">
+          <div class="hr-track-dates">
+            <span>Sent <strong>${esc(sentStr)}</strong></span>
+            <span>${isOverdue ? 'Was due' : 'Due'} <strong>${esc(dueStr)}</strong>${overshootChip}</span>
+          </div>
+          <div class="hr-bar" title="${barTip}">
+            <div class="hr-bar-fill ${fillClass}" style="width: ${barPct}%;"></div>
+          </div>
+        </div>
+      `;
+    }
+    const finalTag = isFinal ? '<span class="hr-final-tag">FINAL · LAST CHANCE</span>' : '';
+    return `
+      <div class="handoff-row ${cls} ${isFinal ? 'final' : ''}" onclick="goToModule('${m.id}', ${m.d})" title="Jump to ${esc(m.n)}">
+        <div class="hr-icon">${icon}</div>
+        <div class="hr-main">
+          <div class="hr-day-badge">Day ${m.d}</div>
+          <div class="hr-title">${esc(m.n)}${finalTag}</div>
+          <div class="hr-meta">${stageChip(m)}</div>
+        </div>
+        ${trackHtml}
+        <div class="hr-status">
+          <div class="hr-days">${daysBig}</div>
+          <div class="hr-days-label ${daysLabelCls}">${daysLabel}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const handoffEmpty = `
+    <div class="handoff-empty">
+      <div class="handoff-empty-title">🚀 Nothing with stakeholders right now</div>
+      <div class="handoff-empty-sub">When a module moves to <strong>In Review</strong> or <strong>Final Review</strong>, it lands here so you can see the review window at a glance and follow up before dates slip.</div>
+    </div>
+  `;
+
+  const countsHtml = [
+    handoffOverdue > 0 ? `<span class="handoff-count overdue">${handoffOverdue} overdue</span>` : '',
+    `<span class="handoff-count active">${handoffActive} open</span>`,
+    handoffNoDate > 0 ? `<span class="handoff-count no-date">${handoffNoDate} no date</span>` : ''
+  ].join('');
+
+  // ===== WITH DESIGN — modules currently in the design queue =====
+  // Mirrors The Handoff pattern but for content the design team owns:
+  // In Development (ip) + all Revisions rounds (r1, r2, r3). This is where
+  // auto-flipped modules land when a stakeholder review window closes.
+  const designStatuses = ['ip', 'r1', 'r2', 'r3'];
+  const designMods = modules
+    .filter(m => designStatuses.includes(getStatus(m)))
+    .map(m => {
+      const st = getStatus(m);
+      // "Just returned" = auto-flipped within the last 7 days.
+      let justReturned = false;
+      let ageDays = null;
+      if (m.returnedAt) {
+        const ret = new Date(m.returnedAt + 'T12:00:00');
+        const now = new Date(); now.setHours(12,0,0,0);
+        ageDays = Math.floor((now - ret) / (1000*60*60*24));
+        if (ageDays >= 0 && ageDays <= 7) justReturned = true;
+      }
+      // Sort priority: revisions with a returned-recently stamp first,
+      // then other revisions by round (r3 > r2 > r1), then in-development.
+      const priority = st === 'r3' ? 0 : st === 'r2' ? 1 : st === 'r1' ? 2 : 3;
+      return {m, st, priority, justReturned, ageDays};
+    })
+    .sort((a, b) => {
+      if (a.justReturned !== b.justReturned) return a.justReturned ? -1 : 1;
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      return a.m.d - b.m.d;
+    });
+
+  const designRevisionsCount = designMods.filter(x => x.st !== 'ip').length;
+  const designInDevCount = designMods.filter(x => x.st === 'ip').length;
+  const designReturnedCount = designMods.filter(x => x.justReturned).length;
+
+  const designRows = designMods.map(({m, st, justReturned, ageDays}) => {
+    const isRevision = st !== 'ip';
+    const icon = justReturned ? '↩' : (isRevision ? '✎' : '🛠');
+    const roundLabel = st === 'ip' ? 'In Development' :
+                       st === 'r1' ? 'Revisions Round 1' :
+                       st === 'r2' ? 'Revisions Round 2' :
+                       'Revisions Round 3';
+    const returnedTag = justReturned
+      ? `<span class="wd-returned-tag">${ageDays === 0 ? 'RETURNED TODAY' : ageDays === 1 ? 'RETURNED YESTERDAY' : 'RETURNED ' + ageDays + 'D AGO'}</span>`
+      : '';
+    // Optional: how long has this been sitting in design (based on design start).
+    let sittingHtml = '';
+    if (m.dstart) {
+      const start = new Date(m.dstart + 'T12:00:00');
+      const now = new Date(); now.setHours(12,0,0,0);
+      const days = Math.floor((now - start) / (1000*60*60*24));
+      if (days >= 0) sittingHtml = `<span class="wd-sitting">${days}d in design</span>`;
+    }
+    const cls = justReturned ? 'returned' : (isRevision ? 'revision' : '');
+    return `
+      <div class="wd-row ${cls} st-${st}" onclick="goToModule('${m.id}', ${m.d})" title="Jump to ${esc(m.n)}">
+        <div class="wd-icon">${icon}</div>
+        <div class="wd-main">
+          <div class="wd-day-badge">Day ${m.d}</div>
+          <div class="wd-title">${esc(m.n)}${returnedTag}</div>
+          <div class="wd-meta">${stageChip(m)}${sittingHtml}</div>
+        </div>
+        <div class="wd-status">
+          <div class="wd-round-label ${st}">${roundLabel}</div>
+          <div class="wd-mins-label">${m.m}m</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const designEmpty = `
+    <div class="wd-empty">
+      <div class="wd-empty-title">✨ Design queue is clear</div>
+      <div class="wd-empty-sub">Nothing is currently being built or revised. New modules land here when they move to <strong>In Development</strong>, and returned modules land here when a stakeholder review window closes without feedback.</div>
+    </div>
+  `;
+
+  const designCountsHtml = [
+    designReturnedCount > 0 ? `<span class="wd-count returned">${designReturnedCount} just returned</span>` : '',
+    designRevisionsCount > 0 ? `<span class="wd-count revision">${designRevisionsCount} in revision</span>` : '',
+    `<span class="wd-count active">${designInDevCount} in development</span>`
+  ].filter(Boolean).join('');
+
+  document.getElementById('trackerContent').innerHTML = `
+    <div class="route-wrap">
+      <div class="route-header">
+        <div class="route-compass">🧭</div>
+        <div class="route-header-text">
+          <div class="route-eyebrow">Content Lifecycle</div>
+          <div class="route-title">Building Toward Delivery</div>
+          <div class="route-sub">Every module moves through the same stages before it reaches learners.</div>
+        </div>
+      </div>
+      <div class="route-metrics">
+        <div class="route-metric">
+          <div class="route-metric-label">Total Modules</div>
+          <div class="route-metric-value">${totalMods}</div>
+          <div class="route-metric-sub">across 10 training days</div>
+        </div>
+        <div class="route-metric">
+          <div class="route-metric-label">Complete</div>
+          <div class="route-metric-value cp">${overallCounts.cp}</div>
+          <div class="route-metric-sub">${overallCpRounded}% delivered</div>
+        </div>
+        <div class="route-metric">
+          <div class="route-metric-label">In Progress</div>
+          <div class="route-metric-value ip">${overallInFlight}</div>
+          <div class="route-metric-sub">${overallCounts.ip} dev · ${overallCounts.rv} review · ${overallCounts.r1 + overallCounts.r2 + overallCounts.r3} revising · ${overallCounts.fr} final</div>
+        </div>
+        <div class="route-metric">
+          <div class="route-metric-label">Not Started</div>
+          <div class="route-metric-value ns">${overallCounts.ns}</div>
+          <div class="route-metric-sub">awaiting design</div>
+        </div>
+      </div>
+      <div class="route-stages-wrap">
+        <div class="route-stages-heading">Stages of the Journey</div>
+        <div class="route-stages">${stagesHtml}</div>
+      </div>
+
+      <div class="handoff-wrap">
+        <div class="handoff-header">
+          <div>
+            <div class="handoff-eyebrow">The Handoff</div>
+            <div class="handoff-title">With Stakeholders</div>
+            <div class="handoff-sub">Modules currently in stakeholders' hands. Each package shows sent date, due date, and how much of the review window is left. When a review window closes without feedback, the module auto-returns to the design queue below.</div>
+          </div>
+          <div class="handoff-counts">${countsHtml}</div>
+        </div>
+        ${reviewMods.length ? `<div class="handoff-list">${handoffRows}</div>` : handoffEmpty}
+      </div>
+
+      <div class="handoff-wrap wd-wrap">
+        <div class="handoff-header">
+          <div>
+            <div class="handoff-eyebrow wd-eyebrow">The Queue</div>
+            <div class="handoff-title">With Design</div>
+            <div class="handoff-sub">Modules the design team is actively building or revising. Items tagged <strong>RETURNED</strong> came back from stakeholder review within the last week.</div>
+          </div>
+          <div class="handoff-counts">${designCountsHtml}</div>
+        </div>
+        ${designMods.length ? `<div class="handoff-list wd-list">${designRows}</div>` : designEmpty}
+      </div>
+
+      <div class="placement-banner on-dark">
+        <div class="placement-banner-icon">📍</div>
+        <div class="placement-banner-body">
+          <div class="placement-banner-title">Placement is a working sequence, not a commitment</div>
+          <div class="placement-banner-sub">Content is grouped below by <strong>lifecycle stage</strong>, which is where each module belongs in the billing workflow. Day tags shown on individual modules are the current working placement and may shift as scoping decisions land.</div>
+        </div>
+      </div>
+
+      <div class="route-days-heading">
+        By Lifecycle Stage
+        <span class="hint">Click any stage to expand · click again to collapse</span>
+      </div>
+      <div class="route-days">${daysHtml}</div>
+    </div>
+  `;
+}
+
+// ===== DAY VIEW (Content Details — grouped by Lifecycle Stage) =====
+// Primary axis is now the lifecycle stage the module teaches, matching the
+// billing workflow. Day placement is a secondary filter and appears as a
+// small tag on each card so stakeholders don't read it as locked-in.
+function renderDay() {
+  const stageEl = document.getElementById('dayStageSelect');
+  const dayEl = document.getElementById('daySelect');
+  const stage = stageEl ? stageEl.value : 'collect';
+  const dayFilterRaw = dayEl ? dayEl.value : '';
+  const dayFilter = dayFilterRaw ? parseInt(dayFilterRaw) : null;
+
+  // Pull every module matching the selected stage (across all days).
+  let stageMods = modules.filter(m => {
+    const k = stageKey(m);
+    if (stage === '__none__') return !k;
+    return k === stage;
+  });
+  if (dayFilter !== null && !isNaN(dayFilter)) {
+    stageMods = stageMods.filter(m => m.d === dayFilter);
+  }
+  // Sort by day (ascending) so learners/reviewers see the intended flow.
+  stageMods.sort((a,b) => (a.d - b.d) || a.n.localeCompare(b.n));
+
+  const stageMetaMap = {
+    collect: {n:'01 · Collect Data',      c:'stage-collect'},
+    prep:    {n:'02 · Prep Work',         c:'stage-prep'},
+    calc:    {n:'03 · Calculate Charges', c:'stage-calc'},
+    quality: {n:'04 · Quality Check',     c:'stage-quality'},
+    bill:    {n:'05 · Bill Residents',    c:'stage-bill'},
+    recovery:{n:'06 · Recovery',          c:'stage-recovery'},
+    comms:   {n:'Customer Comms',         c:'stage-comms'},
+    __none__:{n:'Foundational / No Stage',c:'stage-none'},
+  };
+  const stageMeta = stageMetaMap[stage] || stageMetaMap.collect;
+
+  const totalMins = stageMods.reduce((s,m) => s + m.m, 0);
+  const totalHours = (totalMins / 60).toFixed(1);
+  const daySpread = [...new Set(stageMods.map(m => m.d))].sort((a,b) => a-b);
+  const daySpreadLabel = daySpread.length === 0 ? '—' :
+    daySpread.length === 1 ? `Day ${daySpread[0]}` :
+    `Days ${daySpread[0]}–${daySpread[daySpread.length-1]} (${daySpread.length} days)`;
+
+  const emptyMsg = dayFilter !== null
+    ? `No modules for this stage on Day ${dayFilter}.`
+    : 'No modules yet in this stage. Open the Content Master List to add modules.';
+  const cards = stageMods.length === 0 ? `<div class="empty">${emptyMsg}</div>` : stageMods.map(m => {
+    const st = getStatus(m);
+    const info = reviewInfo(m);
+    return `
+    <div class="module-card st-${st} ${isInReview(st) && info.delta !== null && info.delta < 0 ? 'rv-overdue' : ''} ${stageClass(m)}" data-id="${m.id}" ondragover="event.preventDefault(); this.classList.add('drag-over');" ondragleave="this.classList.remove('drag-over');" ondrop="commitReorder(event, '${m.id}', ${m.d});">
+      <div class="module-card-header">
+        <span class="drag-handle editor-only" draggable="true" ondragstart="dragSrcId='${m.id}'; event.dataTransfer.effectAllowed='move';" title="Drag to reorder">⋮⋮</span>
+        <div class="module-title">${esc(m.n)}</div>
+        <div class="module-meta">
+          ${stageChip(m)}
+          ${statusPill(m)}
+          <span class="working-day-tag" title="Working day placement, may shift">Day ${m.d}</span>
+          <span class="ct-pill">${esc(m.c)}</span>
+          <span class="mins-pill">${m.m} min</span>
+          <div class="module-controls">
+            ${m.link ? `<a class="icon-btn drive" href="${esc(m.link)}" target="_blank" rel="noopener" title="Open in Google Drive">📁 Drive</a>` : ''}
+            <button class="icon-btn editor-only" onclick="openEditModal('${m.id}')" title="Edit">✎ Edit</button>
+          </div>
+        </div>
+      </div>
+      ${isInReview(st) ? reviewLiveBanner(m) : ''}
+      <div class="module-body">
+        ${m.o ? `<div class="module-field"><strong>Learner Outcome</strong><div class="field-content">${esc(m.o)}</div></div>` : ''}
+        ${m.dec ? `<div class="module-field"><strong>Decisions to Make</strong><div class="field-content">${esc(m.dec)}</div></div>` : ''}
+        ${m.sys ? `<div class="module-field"><strong>Systems / Tools</strong><div class="field-content">${esc(m.sys)}</div></div>` : ''}
+        ${(m.a1 || m.a2 || m.a3) ? `<div class="module-field"><strong>Artifacts</strong><div class="field-content">${[m.a1,m.a2,m.a3].filter(Boolean).map(esc).join(' · ')}</div></div>` : ''}
+      </div>
+      ${m.nt ? `<div class="module-field" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border-soft);"><strong>Notes</strong><div class="field-content">${esc(m.nt)}</div></div>` : ''}
+      <div class="comments-section">
+        <div class="comments-header"><span>Comments</span><span style="font-weight:400;color:var(--gray-body);font-size:10px;">${(overlays.comments[m.id]||[]).length} total</span></div>
+        <div class="comment-list" id="comments-${m.id}">${(overlays.comments[m.id]||[]).map((c,i) => renderComment(m.id, c, i)).join('')}</div>
+        <input type="text" class="comment-input" placeholder="Add a comment and press Enter..." onkeydown="handleCommentKey(event, '${m.id}')">
+        <div class="comment-input-hint">Enter to save · Shift+Enter for line break</div>
+      </div>
+    </div>
+  `;
+  }).join('');
+
+  document.getElementById('dayContent').innerHTML = `
+    <div class="stage-summary-bar ${stageMeta.c}">
+      <div class="stage-summary-heading">
+        <span class="stage-chip ${stageMeta.c}" style="pointer-events:none;">${stageMeta.n}</span>
+        <span class="stage-summary-count">${stageMods.length} module${stageMods.length === 1 ? '' : 's'}</span>
+      </div>
+      <div class="stage-summary-meta">
+        <span><strong>${totalMins}</strong> minutes total (${totalHours}h)</span>
+        <span>Working placement: <strong>${daySpreadLabel}</strong></span>
+      </div>
+    </div>
+    <div class="placement-banner compact">
+      <div class="placement-banner-icon">📍</div>
+      <div class="placement-banner-body">
+        <div class="placement-banner-title">Day tags below are working placement, not commitments</div>
+        <div class="placement-banner-sub">Content is organized by the billing lifecycle stage it teaches. The day pill on each module shows the current tentative day and may shift as scoping decisions land. For legacy day-based grouping, see the <strong>Content Master List</strong> tab.</div>
+      </div>
+    </div>
+    <div class="module-list">${cards}</div>
+  `;
+}
+
+// ===== NOTES =====
+function saveNote(id, val) {
+  overlays.edits[id] = overlays.edits[id] || {};
+  overlays.edits[id].wn = val;
+  saveOverlays();
+}
+function showSaved(id) {
+  const el = document.getElementById('notes-status-' + id);
+  if (!el) return;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1200);
+}
+
+// ===== COMMENTS =====
+function renderComment(mid, c, i) {
+  return `
+    <div class="comment-item">
+      <div class="comment-text">${esc(c.t)}</div>
+      <div class="comment-meta">${esc(c.ts)}</div>
+      <button class="comment-delete editor-only" onclick="deleteComment('${mid}', ${i})" title="Delete comment">✕</button>
+    </div>
+  `;
+}
+function handleCommentKey(e, id) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    const val = e.target.value.trim();
+    if (!val) return;
+    overlays.comments[id] = overlays.comments[id] || [];
+    const now = new Date();
+    const ts = now.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' ' + now.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+    overlays.comments[id].push({t: val, ts});
+    saveOverlays();
+    e.target.value = '';
+    renderDay();
+    showToast('Comment added');
+  }
+}
+function deleteComment(mid, idx) {
+  if (!overlays.comments[mid]) return;
+  overlays.comments[mid].splice(idx, 1);
+  saveOverlays();
+  renderDay();
+}
+
+// ===== ALL CONTENT =====
+function renderAll() {
+  const q = document.getElementById('filterInput').value.toLowerCase();
+  const dayFilter = document.getElementById('filterDay').value;
+  const stageFilter = document.getElementById('filterStage').value;
+  let list = orderedAll();
+  if (q) list = list.filter(m => (m.n+' '+m.c+' '+(m.sys||'')+' Day '+m.d).toLowerCase().includes(q));
+  if (dayFilter) list = list.filter(m => m.d === parseInt(dayFilter));
+  if (stageFilter) {
+    if (stageFilter === '__none__') list = list.filter(m => !stageKey(m));
+    else list = list.filter(m => stageKey(m) === stageFilter);
+  }
+  document.getElementById('allCountLabel').textContent = list.length ? `· ${list.length} shown` : '';
+
+  const header = `
+    <div class="all-content-header">
+      <span></span>
+      <span>Day</span>
+      <span>Title</span>
+      <span class="h-stage">Stage</span>
+      <span class="h-status">Status</span>
+      <span class="h-type">Type</span>
+      <span class="h-mins">Min</span>
+      <span class="h-review">Review</span>
+      <span></span>
+      <span class="h-edit">Edit</span>
+    </div>
+  `;
+
+  const rows = list.map(m => {
+    return `
+    <div class="compact-row ${stageClass(m)} st-${getStatus(m)}" data-id="${m.id}" ondragover="event.preventDefault(); this.classList.add('drag-over');" ondragleave="this.classList.remove('drag-over');" ondrop="commitReorder(event, '${m.id}', ${m.d});">
+      <span class="drag-handle editor-only" draggable="true" ondragstart="dragSrcId='${m.id}'; event.dataTransfer.effectAllowed='move';">⋮⋮</span>
+      <span class="cr-day">Day ${m.d}</span>
+      <span class="cr-title" title="${esc(m.n)}">${esc(m.n)}</span>
+      ${stageChip(m)}
+      ${statusPillClickable(m)}
+      <span class="cr-ct">${esc(m.c)}</span>
+      <span class="cr-mins">${m.m}m</span>
+      <span class="cr-review">${reviewBadge(m)}</span>
+      ${m.link ? `<a class="icon-btn drive" href="${esc(m.link)}" target="_blank" rel="noopener" title="Open in Google Drive">📁</a>` : '<span></span>'}
+      <button class="icon-btn editor-only" onclick="openEditModal('${m.id}')" title="Edit">✎</button>
+    </div>
+  `;
+  }).join('');
+
+  document.getElementById('allContent').innerHTML = list.length ? (header + rows) : '<div class="empty">No modules match your filter.</div>';
+}
+
+// ===== REVIEW (dates) =====
+function addBusinessDays(dateStr, biz) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + 'T12:00:00');
+  if (isNaN(d)) return null;
+  let count = 0;
+  while (count < biz) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return d;
+}
+function fmtDate(d) {
+  if (!d) return '';
+  if (typeof d === 'string') d = new Date(d + 'T12:00:00');
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+}
+function daysUntil(d) {
+  if (!d) return null;
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  const target = new Date(d);
+  target.setHours(0,0,0,0);
+  return Math.round((target - now) / (24*60*60*1000));
+}
+function businessDaysBetween(start, end) {
+  if (!start || !end) return 0;
+  const s = new Date(start); s.setHours(0,0,0,0);
+  const e = new Date(end); e.setHours(0,0,0,0);
+  if (e <= s) return 0;
+  let count = 0;
+  const cur = new Date(s);
+  while (cur < e) {
+    cur.setDate(cur.getDate() + 1);
+    const dow = cur.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
+}
+// A module is "in review with stakeholders" only when status is In Review (rv)
+// or Final Review (fr). Revisions rounds (r1, r2, r3) mean the module is back
+// with the designer for changes, NOT sitting with reviewers, so those statuses
+// should not trigger the review banner, ribbon, badge, or Handoff listing.
+function isInReview(status) {
+  return status === 'rv' || status === 'fr';
+}
+
+function reviewInfo(m) {
+  // Sent date = when design actually finished (m.dendActual).
+  // Falls back to legacy m.dend for older records that don't have dendActual yet.
+  const sentSource = m.dendActual || m.dend;
+  let sent = sentSource ? new Date(sentSource + 'T12:00:00') : null;
+  let due = null;
+  if (m.revclose) due = new Date(m.revclose + 'T12:00:00');
+  else if (sentSource) due = addBusinessDays(sentSource, 7);
+  // Defensive fallback: any review-family module with no sent date still
+  // needs a review window. Treat today as sent so the bar renders.
+  const st = getStatus(m);
+  if (!sent && isInReview(st)) {
+    const t = new Date();
+    const iso = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
+    sent = new Date(iso + 'T12:00:00');
+    if (!due) due = addBusinessDays(iso, 7);
+  }
+  const delta = due ? daysUntil(due) : null;
+  const now = new Date(); now.setHours(12,0,0,0);
+  const bizTotal   = sent && due ? businessDaysBetween(sent, due) : 0;
+  const bizElapsed = sent && now >= sent ? businessDaysBetween(sent, now) : 0;
+  const bizFilled  = Math.min(bizElapsed, bizTotal);
+  const bizOverdue = Math.max(0, bizElapsed - bizTotal);
+  const bizRemaining = Math.max(0, bizTotal - bizFilled);
+  return {sent, due, delta, bizTotal, bizFilled, bizOverdue, bizRemaining, override: !!m.revclose};
+}
+function reviewBadge(m) {
+  const st = getStatus(m);
+  if (st === 'cp') {
+    const completedOn = m.dendActual || m.dend;
+    if (completedOn) return `<span class="review-badge rb-done">✓ ${fmtDate(completedOn)}</span>`;
+    return '';
+  }
+  if (!isInReview(st)) return '';
+  const info = reviewInfo(m);
+  const finalTag = st === 'fr' ? 'FINAL · ' : '';
+  if (!info.due) return `<span class="review-badge rb-scheduled">${finalTag}no date</span>`;
+  if (info.delta === null) return '';
+  if (info.delta < 0) return `<span class="review-badge rb-overdue">${finalTag}${info.bizOverdue}d overdue</span>`;
+  if (info.delta === 0) return `<span class="review-badge rb-locked">🔒 ${finalTag}closes today</span>`;
+  const bizLeft = info.bizRemaining;
+  if (bizLeft === 1) return `<span class="review-badge rb-soon">${finalTag}1d left</span>`;
+  if (bizLeft <= 3) return `<span class="review-badge rb-soon">${finalTag}${bizLeft}d left</span>`;
+  return `<span class="review-badge rb-scheduled">${finalTag}${bizLeft}d left</span>`;
+}
+function reviewCornerRibbon(m) {
+  const info = reviewInfo(m);
+  const isOverdue = info.delta !== null && info.delta < 0;
+  const isFinal = getStatus(m) === 'fr';
+  let label;
+  if (isFinal) label = isOverdue ? 'FINAL REVIEW · OVERDUE' : 'FINAL REVIEW · LAST CHANCE';
+  else         label = isOverdue ? 'REVIEW OVERDUE' : 'IN REVIEW';
+  return `<div class="review-corner-ribbon ${isOverdue ? 'overdue' : ''} ${isFinal ? 'final' : ''}">${label}</div>`;
+}
+function reviewLiveBanner(m) {
+  const info = reviewInfo(m);
+  const isOverdue = info.delta !== null && info.delta < 0;
+  const isLocked  = info.delta === 0;
+  const day = info.due ? info.due.getDate() : '?';
+  const month = info.due ? info.due.toLocaleDateString('en-US', {month: 'short'}) : '';
+  const dow = info.due ? info.due.toLocaleDateString('en-US', {weekday: 'short'}) : '';
+  // Use business days for all countdown copy since the review window itself is measured in business days.
+  const bizLeft = info.bizRemaining;
+  const chipText = info.delta === null ? 'NO DATE' : (isOverdue ? `${info.bizOverdue}D LATE` : (isLocked ? 'LOCKED' : `${bizLeft}D LEFT`));
+  const calCls = info.delta === null ? 'no-date active' : (isOverdue ? 'overdue' : (isLocked ? 'locked' : 'active'));
+  const cdCls  = isOverdue ? 'overdue' : (isLocked ? 'locked' : '');
+  const headline = info.delta === null ? 'AWAITING REVIEW' : (isOverdue ? 'REVIEW WINDOW CLOSED' : (isLocked ? 'REVIEW WINDOW CLOSES TODAY' : 'REVIEW IN PROGRESS'));
+  const detail = info.delta === null
+    ? 'This module is with stakeholders but no due date has been set.'
+    : (isOverdue
+        ? `Was due <strong>${fmtDate(info.due)}</strong> — ${info.bizOverdue} business day${info.bizOverdue === 1 ? '' : 's'} ago. Follow up with reviewers.`
+        : (isLocked
+            ? `Final day of the review window (<strong>${fmtDate(info.due)}</strong>). Reviewers must return feedback today.`
+            : `Reviewers have until <strong>${fmtDate(info.due)}</strong>${bizLeft > 0 ? ` (${bizLeft} business day${bizLeft === 1 ? '' : 's'} left)` : ''}.`));
+  const headlineIcon = isLocked ? '🔒' : '👁️';
+  return `
+    <div class="review-countdown ${cdCls}">
+      <div class="rc-glass">
+        <div class="review-calendar rc-md ${calCls}">
+          <div class="rcal-page">
+            <div class="rcal-month">${month || 'TBD'}</div>
+            <div class="rcal-day">${day}</div>
+            <div class="rcal-dow">${dow || '—'}</div>
+            <div class="rcal-chip">${chipText}</div>
+          </div>
+          <div class="rcal-curl"></div>
+          <div class="rcal-tear"></div>
+        </div>
+      </div>
+      <div class="rc-body">
+        <div class="rc-headline"><span class="rc-eye">${headlineIcon}</span>${headline}${info.override ? '<span class="rc-override">custom date</span>' : ''}</div>
+        <div class="rc-detail">${detail}</div>
+      </div>
+    </div>
+  `;
+}
+function renderReviewSummary() { return ''; }
+
+// ===== AGENDA =====
+let agendaActiveDay = 3;
+const ANCHOR_META = {
+  morningReview: {icon: '☕', title: 'Morning Review', label: 'Kickoff'},
+  midMorningBreak: {icon: '☕', title: 'Morning Break', label: 'Break'},
+  lunch: {icon: '🥗', title: 'Lunch Break', label: 'Lunch', cls: 'lunch'},
+  afternoonBreak: {icon: '☕', title: 'Afternoon Break', label: 'Break'},
+  eod: {icon: '📋', title: 'End of Day Review', label: 'Wrap'},
+  otj: {icon: '💼', title: 'OTJ Practice / Buffer', label: 'OTJ Time', cls: 'otj'}
+};
+const ANCHOR_IDS = ['morningReview', 'midMorningBreak', 'lunch', 'afternoonBreak', 'eod', 'otj'];
+
+function getAgendaAnchors() {
+  return Object.assign({
+    morningReview: 15,
+    midMorningBreak: 15,
+    lunch: 60,
+    afternoonBreak: 15,
+    eod: 15,
+    otj: 60
+  }, overlays.agenda.anchors || {});
+}
+function saveAgendaAnchors(a) {
+  overlays.agenda.anchors = a;
+  saveOverlays();
+}
+function updateAnchor(key, val) {
+  const a = getAgendaAnchors();
+  a[key] = Math.max(0, parseInt(val) || 0);
+  saveAgendaAnchors(a);
+  renderAgenda();
+}
+function resetAgendaAnchors() {
+  delete overlays.agenda.anchors;
+  saveOverlays();
+  renderAgenda();
+}
+function sizeClass(mins) {
+  if (mins <= 20) return 'size-s';
+  if (mins <= 45) return 'size-m';
+  return 'size-l';
+}
+function sizeLabel(mins) { return mins + 'm'; }
+
+function buildDayBlocks(day) {
+  const anchors = getAgendaAnchors();
+  const dayMods = orderedForDay(day);
+  const modBlocks = dayMods.map(m => ({
+    kind: 'mod',
+    id: m.id,
+    title: m.n,
+    mins: m.m,
+    m: m
+  }));
+  const blocks = [];
+  blocks.push({kind:'anchor', key:'morningReview', title: ANCHOR_META.morningReview.title, mins: anchors.morningReview});
+  const morningQuota = 90;
+  let morningMins = 0;
+  let idx = 0;
+  while (idx < modBlocks.length && morningMins + modBlocks[idx].mins <= morningQuota) {
+    blocks.push(modBlocks[idx]); morningMins += modBlocks[idx].mins; idx++;
+  }
+  blocks.push({kind:'anchor', key:'midMorningBreak', title: ANCHOR_META.midMorningBreak.title, mins: anchors.midMorningBreak});
+  const beforeLunch = 90;
+  let cur = 0;
+  while (idx < modBlocks.length && cur + modBlocks[idx].mins <= beforeLunch) {
+    blocks.push(modBlocks[idx]); cur += modBlocks[idx].mins; idx++;
+  }
+  blocks.push({kind:'anchor', key:'lunch', title: ANCHOR_META.lunch.title, mins: anchors.lunch});
+  const afternoonPart1 = 120;
+  cur = 0;
+  while (idx < modBlocks.length && cur + modBlocks[idx].mins <= afternoonPart1) {
+    blocks.push(modBlocks[idx]); cur += modBlocks[idx].mins; idx++;
+  }
+  blocks.push({kind:'anchor', key:'afternoonBreak', title: ANCHOR_META.afternoonBreak.title, mins: anchors.afternoonBreak});
+  while (idx < modBlocks.length) { blocks.push(modBlocks[idx]); idx++; }
+  if (anchors.otj > 0) blocks.push({kind:'anchor', key:'otj', title: ANCHOR_META.otj.title, mins: anchors.otj});
+  blocks.push({kind:'anchor', key:'eod', title: ANCHOR_META.eod.title, mins: anchors.eod});
+  return blocks;
+}
+
+function selectAgendaDay(d) { agendaActiveDay = d; renderAgenda(); }
+
+function updateModuleDay(id, newDay) {
+  const target = Math.max(3, Math.min(10, parseInt(newDay) || 3));
+  const m = modules.find(x => x.id === id);
+  if (!m || m.d === target) return;
+  overlays.edits[id] = overlays.edits[id] || {};
+  overlays.edits[id].d = target;
+  saveOverlays();
+  rebuildModules();
+  renderAgenda();
+  showToast(`Moved to Day ${target}`);
+}
+
+function renderAgenda() {
+  const anchors = getAgendaAnchors();
+  const days = [3,4,5,6,7,8,9,10];
+  const dayTabsHtml = days.map(d => {
+    const count = modules.filter(m => m.d === d).length;
+    return `<button class="agenda-day-tab ${d === agendaActiveDay ? 'active' : ''}" onclick="selectAgendaDay(${d})">Day ${d}<span class="adt-count">${count}</span></button>`;
+  }).join('');
+  const blocks = buildDayBlocks(agendaActiveDay);
+  const modMins = blocks.filter(b => b.kind === 'mod').reduce((s, b) => s + b.mins, 0);
+  const anchorMins = blocks.filter(b => b.kind === 'anchor').reduce((s, b) => s + b.mins, 0);
+  const totalMins = modMins + anchorMins;
+  const modCount = blocks.filter(b => b.kind === 'mod').length;
+  let order = 0;
+  const blocksHtml = blocks.length === 0 ? `<div class="agenda-empty">No content or anchors for Day ${agendaActiveDay} yet.</div>` : blocks.map(b => {
+    if (b.kind === 'anchor') {
+      const meta = ANCHOR_META[b.key];
+      return `<div class="agenda-block anchor ${meta.cls || ''}"><div class="ab-size-badge">${meta.icon}</div><div class="ab-body"><div class="ab-title">${meta.title}</div><div class="ab-mins">${b.mins}m</div></div><div class="ab-controls"><span class="ab-order">${meta.label}</span></div></div>`;
+    }
+    order++;
+    const sz = sizeClass(b.mins);
+    return `
+      <div class="agenda-block mod ${sz}" draggable="true" data-id="${b.id}" ondragstart="dragSrcId='${b.id}'; this.classList.add('dragging'); event.dataTransfer.effectAllowed='move';" ondragend="this.classList.remove('dragging');" ondragover="event.preventDefault(); this.classList.add('drag-over');" ondragleave="this.classList.remove('drag-over');" ondrop="commitReorder(event, '${b.id}', ${b.m.d});">
+        <div class="ab-size-badge">${sizeLabel(b.mins)}</div>
+        <div class="ab-body">
+          <div class="ab-title">${esc(b.title)}</div>
+          <span class="ab-mins">${b.mins}m</span>
+        </div>
+        <div class="ab-controls">
+          <span class="ab-order">#${order}</span>
+          <label class="ab-day-label">Day</label>
+          <input type="number" class="ab-day-input" min="3" max="10" value="${b.m.d}" onchange="updateModuleDay('${b.id}', this.value)" title="Move to a different day">
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('agendaContent').innerHTML = `
+    <div class="agenda-header">
+      <div>
+        <div class="section-eyebrow">Daily Blocking</div>
+        <div class="section-title" style="margin-bottom:0;">Agenda Builder</div>
+      </div>
+    </div>
+    <details class="agenda-anchors" open>
+      <summary><span>Agenda Anchors <span style="font-weight:400;color:var(--navy-mid);font-size:12px;">· defaults for every day</span></span></summary>
+      <div class="sub">Set the minutes for recurring anchor blocks that appear on every training day.</div>
+      <div class="agenda-anchors-grid">
+        ${ANCHOR_IDS.map(k => {
+          const meta = ANCHOR_META[k];
+          return `<div class="aa-row"><label>${meta.icon} ${meta.title}</label><input type="number" min="0" step="5" value="${anchors[k]}" onchange="updateAnchor('${k}', this.value)"></div>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:14px;display:flex;justify-content:flex-end;"><button class="btn" onclick="resetAgendaAnchors()">Reset to defaults</button></div>
+    </details>
+    <div class="agenda-day-tabs">${dayTabsHtml}</div>
+    <div class="agenda-schedule">
+      <div class="agenda-schedule-header">
+        <h3>Day ${agendaActiveDay} · Blocking</h3>
+        <div class="agenda-schedule-summary">
+          <span><strong>${modCount}</strong> modules</span>
+          <span><strong>${modMins}m</strong> teaching</span>
+          <span><strong>${anchorMins}m</strong> anchors</span>
+          <span><strong>${totalMins}m</strong> total</span>
+        </div>
+      </div>
+      <div class="agenda-schedule-list">${blocksHtml}</div>
+    </div>
+  `;
+}
+
+// ===== DRAG & DROP =====
+let dragSrcId = null;
+function commitReorder(e, targetId, day) {
+  e.preventDefault();
+  const target = e.currentTarget;
+  target.classList.remove('drag-over');
+  if (!dragSrcId || dragSrcId === targetId) return;
+  const dayMods = orderedForDay(day);
+  const srcMod = modules.find(x => x.id === dragSrcId);
+  if (!srcMod) return;
+  if (srcMod.d !== day) {
+    overlays.edits[dragSrcId] = overlays.edits[dragSrcId] || {};
+    overlays.edits[dragSrcId].d = day;
+    saveOverlays();
+    rebuildModules();
+  }
+  const ids = orderedForDay(day).map(m => m.id).filter(id => id !== dragSrcId);
+  const targetIdx = ids.indexOf(targetId);
+  if (targetIdx === -1) return;
+  ids.splice(targetIdx, 0, dragSrcId);
+  overlays.order[day] = ids;
+  saveOverlays();
+  rebuildModules();
+  const activeTab = document.querySelector('.tab.active').dataset.view;
+  showView(activeTab);
+  dragSrcId = null;
+}
+
+// ===== MODAL =====
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Add Content';
+  document.getElementById('modalSub').textContent = 'Add a new module to the program.';
+  document.getElementById('modalDeleteBtn').style.display = 'none';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-day').value = '1';
+  document.getElementById('f-mins').value = '0';
+  document.getElementById('f-ct').value = 'Undetermined';
+  document.getElementById('f-stage').value = '';
+  document.getElementById('f-status').value = 'ns';
+  document.getElementById('f-dstart').value = '';
+  document.getElementById('f-dend').value = '';
+  document.getElementById('f-dendActual').value = '';
+  document.getElementById('f-revclose').value = '';
+  document.getElementById('f-link').value = '';
+  document.getElementById('f-outcome').value = '';
+  document.getElementById('f-decisions').value = '';
+  document.getElementById('f-systems').value = '';
+  document.getElementById('f-a1').value = '';
+  document.getElementById('f-a2').value = '';
+  document.getElementById('f-a3').value = '';
+  document.getElementById('f-notes').value = '';
+  const mb = document.getElementById('modalBackdrop');
+  mb.classList.add('show');
+  mb.scrollTop = 0;
+}
+function openEditModal(id) {
+  const m = modules.find(x => x.id === id);
+  if (!m) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Content';
+  document.getElementById('modalSub').textContent = m.n;
+  document.getElementById('modalDeleteBtn').style.display = m._base ? 'none' : 'inline-block';
+  document.getElementById('f-name').value = m.n || '';
+  document.getElementById('f-day').value = m.d;
+  document.getElementById('f-mins').value = m.m;
+  document.getElementById('f-ct').value = m.c || 'Undetermined';
+  document.getElementById('f-stage').value = m.stage || '';
+  document.getElementById('f-status').value = getStatus(m);
+  document.getElementById('f-dstart').value = m.dstart || '';
+  document.getElementById('f-dend').value = m.dend || '';
+  document.getElementById('f-dendActual').value = m.dendActual || '';
+  document.getElementById('f-revclose').value = m.revclose || '';
+  document.getElementById('f-link').value = m.link || '';
+  document.getElementById('f-outcome').value = m.o || '';
+  document.getElementById('f-decisions').value = m.dec || '';
+  document.getElementById('f-systems').value = m.sys || '';
+  document.getElementById('f-a1').value = m.a1 || '';
+  document.getElementById('f-a2').value = m.a2 || '';
+  document.getElementById('f-a3').value = m.a3 || '';
+  document.getElementById('f-notes').value = m.nt || '';
+  const mbE = document.getElementById('modalBackdrop');
+  mbE.classList.add('show');
+  mbE.scrollTop = 0;
+}
+function closeModal() { document.getElementById('modalBackdrop').classList.remove('show'); }
+function collectForm() {
+  return {
+    n: document.getElementById('f-name').value.trim(),
+    d: parseInt(document.getElementById('f-day').value),
+    m: parseInt(document.getElementById('f-mins').value) || 0,
+    c: document.getElementById('f-ct').value,
+    stage: document.getElementById('f-stage').value || '',
+    st: document.getElementById('f-status').value,
+    dstart: document.getElementById('f-dstart').value || '',
+    dend: document.getElementById('f-dend').value || '',
+    dendActual: document.getElementById('f-dendActual').value || '',
+    revclose: document.getElementById('f-revclose').value || '',
+    link: document.getElementById('f-link').value.trim(),
+    o: document.getElementById('f-outcome').value.trim(),
+    dec: document.getElementById('f-decisions').value.trim(),
+    sys: document.getElementById('f-systems').value.trim(),
+    a1: document.getElementById('f-a1').value.trim(),
+    a2: document.getElementById('f-a2').value.trim(),
+    a3: document.getElementById('f-a3').value.trim(),
+    nt: document.getElementById('f-notes').value.trim()
+  };
+}
+function saveModule() {
+  const data = collectForm();
+  if (!data.n) { showToast('Please enter a module name'); return; }
+  if (editingId) {
+    const m = modules.find(x => x.id === editingId);
+    if (m && m._base) {
+      overlays.edits[editingId] = Object.assign({}, overlays.edits[editingId] || {}, data);
+    } else {
+      const idx = overlays.added.findIndex(x => x.id === editingId);
+      if (idx >= 0) overlays.added[idx] = Object.assign({}, overlays.added[idx], data);
+    }
+    showToast('Saved');
+  } else {
+    const id = newId();
+    overlays.added.push(Object.assign({id}, data));
+    showToast('Added');
+  }
+  saveOverlays();
+  rebuildModules();
+  closeModal();
+  const activeTab = document.querySelector('.tab.active').dataset.view;
+  showView(activeTab);
+}
+function deleteModule() {
+  if (!editingId) return;
+  if (!confirm('Delete this module?')) return;
+  const idx = overlays.added.findIndex(x => x.id === editingId);
+  if (idx >= 0) overlays.added.splice(idx, 1);
+  else if (!overlays.deleted.includes(editingId)) overlays.deleted.push(editingId);
+  delete overlays.edits[editingId];
+  delete overlays.comments[editingId];
+  saveOverlays();
+  rebuildModules();
+  closeModal();
+  const activeTab = document.querySelector('.tab.active').dataset.view;
+  showView(activeTab);
+  showToast('Deleted');
+}
+
+document.getElementById('modalBackdrop').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ===== TOAST =====
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ===== EXPORT =====
+function exportJSON() {
+  const data = { savedAt: new Date().toISOString(), overlays };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `billing-dashboard-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Exported');
+}
+
+// ===== INIT =====
+(async function init() {
+  // Render immediately from the local copy, then refresh once the Sheet answers.
+  loadLocalOverlays();
+  rebuildModules();
+  runAutoFlip();
+  // Route from hash if present, otherwise default to the Program Dashboard tab.
+  const hasHash = HASH_TO_VIEW[(window.location.hash || '').replace(/^#/, '').toLowerCase()];
+  if (hasHash) applyHashRoute();
+  else showView('tracker');
+  if (SYNC_URL) {
+    await loadOverlays();
+    rebuildModules();
+    runAutoFlip();
+    // Re-render current view after Sheet sync.
+    const currentTab = document.querySelector('.tab.active');
+    if (currentTab) showView(currentTab.dataset.view, {fromHash: true});
+  }
+})();
+</script>
 </body>
 </html>
