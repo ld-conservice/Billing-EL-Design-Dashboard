@@ -44,7 +44,7 @@ var STORE_KEY = 'foundations.dashboard.cache.v1';
    With a URL here, everything anyone adds is saved to a Google Sheet
    and every stakeholder sees it. If left empty, the dashboard falls
    back to browser-only storage and says so on screen. */
-var SYNC_URL = 'https://script.google.com/macros/s/AKfycbwbxE-7LppOv9L-3Bid7PZD8evjBQhuBxZ7w2ozcG5xtkprDQxC2k7MiNKb9HvXh4BvRw/exec';
+var SYNC_URL = '';
 
 /* Decision Status values on the board, grouped for display. */
 var DECISION_NEEDS = ['Open', 'In Discussion', 'Ready to Confirm'];
