@@ -174,12 +174,12 @@
         <label>Status</label>
         <select id="f-status">
           <option value="ns">Not Started</option>
-          <option value="ip">In Development</option>
-          <option value="rv">In Review</option>
-          <option value="r1">Revisions 1</option>
-          <option value="r2">Revisions 2</option>
-          <option value="r3">Revisions 3</option>
-          <option value="fr">Final Review</option>
+          <option value="od">Outline in Development</option>
+          <option value="or">Outline in Review</option>
+          <option value="ox">Outline Revisions</option>
+          <option value="cd">Content in Development</option>
+          <option value="cr">Content in Review</option>
+          <option value="cx">Content Revisions</option>
           <option value="cp">Complete</option>
           <option value="oh">On Hold</option>
           <option value="cn">Cancelled</option>
@@ -453,13 +453,42 @@ window.addEventListener('hashchange', applyHashRoute);
 
 // ===== STATUS =====
 function getStatus(m) {
-  if (m.st && ['ns','ip','rv','r1','r2','r3','fr','cp','oh','cn'].includes(m.st)) return m.st;
+  if (m.st && ['ns','od','or','ox','cd','cr','cx','cp','oh','cn'].includes(m.st)) return m.st;
   if (m.dr === 0) return 'cp';
   if (m.dr === 1) return 'ns';
   return 'ns';
 }
 function statusLabel(s) {
-  return {ns:'Not Started', ip:'In Development', rv:'In Review', r1:'Revisions 1', r2:'Revisions 2', r3:'Revisions 3', fr:'Final Review', cp:'Complete', oh:'On Hold', cn:'Cancelled'}[s] || s;
+  return {
+    ns:'Not Started',
+    od:'Outline in Development',
+    or:'Outline in Review',
+    ox:'Outline Revisions',
+    cd:'Content in Development',
+    cr:'Content in Review',
+    cx:'Content Revisions',
+    cp:'Complete',
+    oh:'On Hold',
+    cn:'Cancelled'
+  }[s] || s;
+}
+// One-time migration: legacy status codes → new outline/content split.
+// User elected to map all in-flight work to Outline stages.
+function migrateStatuses() {
+  const map = {ip:'od', rv:'or', r1:'ox', r2:'ox', r3:'ox', fr:'or'};
+  let changed = false;
+  if (overlays && overlays.edits) {
+    Object.keys(overlays.edits).forEach(id => {
+      const e = overlays.edits[id];
+      if (e && e.st && map[e.st]) { e.st = map[e.st]; changed = true; }
+    });
+  }
+  if (overlays && overlays.added) {
+    overlays.added.forEach(m => {
+      if (m.st && map[m.st]) { m.st = map[m.st]; changed = true; }
+    });
+  }
+  if (changed) { saveOverlays(); console.log('[migration] status codes updated to new outline/content split'); }
 }
 function stageKey(m) {
   if (m.stage) return m.stage;
@@ -533,10 +562,10 @@ function deleteHistoryEntry(idx) {
 }
 
 function cycleStatus(id) {
-  // Linear flow: Not Started → In Development → In Review → Revisions 1 →
-  // Revisions 2 → Revisions 3 → Final Review → Complete → (loop). oh and cn
-  // rejoin the flow at In Development / Not Started respectively.
-  const cycle = {ns:'ip', ip:'rv', rv:'r1', r1:'r2', r2:'r3', r3:'fr', fr:'cp', cp:'ns', oh:'ip', cn:'ns'};
+  // Linear flow: Not Started → Outline in Dev → Outline in Review → Outline
+  // Revisions → Content in Dev → Content in Review → Content Revisions →
+  // Complete → (loop). oh rejoins at Outline in Dev; cn resets to Not Started.
+  const cycle = {ns:'od', od:'or', or:'ox', ox:'cd', cd:'cr', cr:'cx', cx:'cp', cp:'ns', oh:'od', cn:'ns'};
   const m = modules.find(x => x.id === id);
   if (!m) return;
   const cur = getStatus(m);
@@ -544,23 +573,19 @@ function cycleStatus(id) {
   overlays.edits[id] = overlays.edits[id] || {};
   overlays.edits[id].st = next;
   logStatus(id, next);
-  // Keep revLevel in sync when manually moving into a revision status so the
-  // auto-flip system knows which round we're on next time.
-  if (next === 'r1') overlays.edits[id].revLevel = Math.max(1, m.revLevel || 0);
-  else if (next === 'r2') overlays.edits[id].revLevel = Math.max(2, m.revLevel || 0);
-  else if (next === 'r3') overlays.edits[id].revLevel = Math.max(3, m.revLevel || 0);
-  // When flipping into any stakeholder-facing review state (rv or fr), stamp
+  // When flipping into any stakeholder-facing review state (or/cr), stamp
   // today's date as "sent" so the review window auto-populates
-  // (sent + 5 biz days = due). fr resets the window since it's a new review round.
-  if (next === 'rv' || next === 'fr') {
+  // (sent + 7 biz days = due). Content review is a fresh window since it's
+  // a new round after outline sign-off.
+  if (next === 'or' || next === 'cr') {
     const t = new Date();
     const iso = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
-    if (next === 'fr') {
-      // Final Review is a fresh review window. Restamp BOTH dend and dendActual
+    if (next === 'cr') {
+      // Content Review is a fresh review window. Restamp BOTH dend and dendActual
       // (reviewInfo prefers dendActual, so stamping only dend leaves stale data
       // in the sent-date field and the auto-flip system then treats the fresh
       // review as already past its window). Also clear any manual close-date
-      // override so the 7-business-day auto-window applies.
+      // override so the auto-window applies.
       overlays.edits[id].dend = iso;
       overlays.edits[id].dendActual = iso;
       overlays.edits[id].revclose = '';
@@ -590,20 +615,17 @@ function runAutoFlip() {
   let flipped = 0;
   modules.forEach(m => {
     const st = getStatus(m);
-    if (st !== 'rv' && st !== 'fr') return;
+    if (st !== 'or' && st !== 'cr') return;
     const info = reviewInfo(m);
     if (!info.due) return;
     // Anything whose due date is BEFORE today (i.e. due date already ended
     // at midnight last night) is expired and flips.
     const dueEnd = new Date(info.due.getFullYear(), info.due.getMonth(), info.due.getDate() + 1);
     if (now < dueEnd) return;
-    // Bump revision level, cap at 3.
-    const currentLevel = m.revLevel || 0;
-    const nextLevel = Math.min(currentLevel + 1, 3);
-    const nextStatus = 'r' + nextLevel;
+    // Outline review → Outline revisions; Content review → Content revisions.
+    const nextStatus = st === 'or' ? 'ox' : 'cx';
     overlays.edits[m.id] = overlays.edits[m.id] || {};
     overlays.edits[m.id].st = nextStatus;
-    overlays.edits[m.id].revLevel = nextLevel;
     logStatus(m.id, nextStatus);
     // Stamp the flip so we can show "returned" recency badge.
     overlays.edits[m.id].returnedAt = todayStart.getFullYear() + '-' +
@@ -990,8 +1012,8 @@ function renderTracker() {
       daysBig = info.bizRemaining;
       daysLabel = `business day${info.bizRemaining === 1 ? '' : 's'} left`;
     }
-    const isFinal = getStatus(m) === 'fr';
-    const icon = isOverdue ? '⚠' : (isNoDate ? '?' : (isLocked ? '🔒' : (isFinal ? '🚨' : '🚀')));
+    const isContentReview = getStatus(m) === 'cr';
+    const icon = isOverdue ? '⚠' : (isNoDate ? '?' : (isLocked ? '🔒' : (isContentReview ? '🚨' : '🚀')));
     let trackHtml;
     if (isNoDate) {
       trackHtml = `<div class="hr-track"><div class="hr-track-empty">No sent or due date on record</div></div>`;
@@ -1067,9 +1089,10 @@ function renderTracker() {
 
   // ===== WITH DESIGN — modules currently in the design queue =====
   // Mirrors The Handoff pattern but for content the design team owns:
-  // In Development (ip) + all Revisions rounds (r1, r2, r3). This is where
-  // auto-flipped modules land when a stakeholder review window closes.
-  const designStatuses = ['ip', 'r1', 'r2', 'r3'];
+  // Outline Dev (od) + Content Dev (cd) + Outline Revisions (ox) + Content
+  // Revisions (cx). This is where auto-flipped modules land when a
+  // stakeholder review window closes.
+  const designStatuses = ['od', 'ox', 'cd', 'cx'];
   const designMods = modules
     .filter(m => designStatuses.includes(getStatus(m)))
     .map(m => {
@@ -1083,9 +1106,9 @@ function renderTracker() {
         ageDays = Math.floor((now - ret) / (1000*60*60*24));
         if (ageDays >= 0 && ageDays <= 7) justReturned = true;
       }
-      // Sort priority: revisions with a returned-recently stamp first,
-      // then other revisions by round (r3 > r2 > r1), then in-development.
-      const priority = st === 'r3' ? 0 : st === 'r2' ? 1 : st === 'r1' ? 2 : 3;
+      // Sort priority: closer-to-done first.
+      // cx (content revisions) → ox (outline revisions) → cd (content dev) → od (outline dev)
+      const priority = st === 'cx' ? 0 : st === 'ox' ? 1 : st === 'cd' ? 2 : 3;
       return {m, st, priority, justReturned, ageDays};
     })
     .sort((a, b) => {
@@ -1094,17 +1117,18 @@ function renderTracker() {
       return a.m.d - b.m.d;
     });
 
-  const designRevisionsCount = designMods.filter(x => x.st !== 'ip').length;
-  const designInDevCount = designMods.filter(x => x.st === 'ip').length;
+  const isRevisionStatus = (s) => s === 'ox' || s === 'cx';
+  const designRevisionsCount = designMods.filter(x => isRevisionStatus(x.st)).length;
+  const designInDevCount = designMods.filter(x => !isRevisionStatus(x.st)).length;
   const designReturnedCount = designMods.filter(x => x.justReturned).length;
 
   const designRows = designMods.map(({m, st, justReturned, ageDays}) => {
-    const isRevision = st !== 'ip';
+    const isRevision = isRevisionStatus(st);
     const icon = justReturned ? '↩' : (isRevision ? '✎' : '🛠');
-    const roundLabel = st === 'ip' ? 'In Development' :
-                       st === 'r1' ? 'Revisions Round 1' :
-                       st === 'r2' ? 'Revisions Round 2' :
-                       'Revisions Round 3';
+    const roundLabel = st === 'od' ? 'Outline Development' :
+                       st === 'cd' ? 'Content Development' :
+                       st === 'ox' ? 'Outline Revisions' :
+                       'Content Revisions';
     const returnedTag = justReturned
       ? `<span class="wd-returned-tag">${ageDays === 0 ? 'RETURNED TODAY' : ageDays === 1 ? 'RETURNED YESTERDAY' : 'RETURNED ' + ageDays + 'D AGO'}</span>`
       : '';
@@ -1469,7 +1493,7 @@ function businessDaysBetween(start, end) {
 // with the designer for changes, NOT sitting with reviewers, so those statuses
 // should not trigger the review banner, ribbon, badge, or Handoff listing.
 function isInReview(status) {
-  return status === 'rv' || status === 'fr';
+  return status === 'or' || status === 'cr';
 }
 
 function reviewInfo(m) {
@@ -1507,7 +1531,7 @@ function reviewBadge(m) {
   }
   if (!isInReview(st)) return '';
   const info = reviewInfo(m);
-  const finalTag = st === 'fr' ? 'FINAL · ' : '';
+  const finalTag = st === 'cr' ? 'CONTENT · ' : '';
   if (!info.due) return `<span class="review-badge rb-scheduled">${finalTag}no date</span>`;
   if (info.delta === null) return '';
   if (info.delta < 0) return `<span class="review-badge rb-overdue">${finalTag}${info.bizOverdue}d overdue</span>`;
@@ -1520,11 +1544,11 @@ function reviewBadge(m) {
 function reviewCornerRibbon(m) {
   const info = reviewInfo(m);
   const isOverdue = info.delta !== null && info.delta < 0;
-  const isFinal = getStatus(m) === 'fr';
+  const isContentReview = getStatus(m) === 'cr';
   let label;
-  if (isFinal) label = isOverdue ? 'FINAL REVIEW · OVERDUE' : 'FINAL REVIEW · LAST CHANCE';
-  else         label = isOverdue ? 'REVIEW OVERDUE' : 'IN REVIEW';
-  return `<div class="review-corner-ribbon ${isOverdue ? 'overdue' : ''} ${isFinal ? 'final' : ''}">${label}</div>`;
+  if (isContentReview) label = isOverdue ? 'CONTENT REVIEW · OVERDUE' : 'CONTENT REVIEW';
+  else                 label = isOverdue ? 'OUTLINE REVIEW · OVERDUE' : 'OUTLINE REVIEW';
+  return `<div class="review-corner-ribbon ${isOverdue ? 'overdue' : ''} ${isContentReview ? 'final' : ''}">${label}</div>`;
 }
 function reviewLiveBanner(m) {
   const info = reviewInfo(m);
@@ -1922,6 +1946,7 @@ function exportJSON() {
 (async function init() {
   // Render immediately from the local copy, then refresh once the Sheet answers.
   loadLocalOverlays();
+  migrateStatuses();
   rebuildModules();
   runAutoFlip();
   // Route from hash if present, otherwise default to the Program Dashboard tab.
@@ -1930,6 +1955,7 @@ function exportJSON() {
   else showView('tracker');
   if (SYNC_URL) {
     await loadOverlays();
+    migrateStatuses();
     rebuildModules();
     runAutoFlip();
     // Re-render current view after Sheet sync.
