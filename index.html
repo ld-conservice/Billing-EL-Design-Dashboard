@@ -664,11 +664,14 @@ function renderOverview() {
   const total = modules.length;
   const totalMins = modules.reduce((s, m) => s + m.m, 0);
   const totalHours = (totalMins / 60).toFixed(1);
-  const statusCounts = {ns:0, ip:0, rv:0, r1:0, r2:0, r3:0, fr:0, cp:0, oh:0, cn:0};
+  const statusCounts = {ns:0, od:0, or:0, ox:0, cd:0, cr:0, cx:0, cp:0, oh:0, cn:0};
   modules.forEach(m => statusCounts[getStatus(m)]++);
   const cpPct = total ? Math.round((statusCounts.cp / total) * 100) : 0;
   // In-flight = anything actively being worked on or reviewed (not started/hold/cancel/done are excluded)
-  const ipRv = statusCounts.ip + statusCounts.rv + statusCounts.r1 + statusCounts.r2 + statusCounts.r3 + statusCounts.fr;
+  const inDev = statusCounts.od + statusCounts.cd;
+  const inRev = statusCounts.or + statusCounts.cr;
+  const inRevising = statusCounts.ox + statusCounts.cx;
+  const ipRv = inDev + inRev + inRevising;
 
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi">
@@ -689,7 +692,7 @@ function renderOverview() {
     <div class="kpi ${ipRv > 0 ? 'warn' : ''}">
       <div class="kpi-label">In Progress</div>
       <div class="kpi-value">${ipRv}</div>
-      <div class="kpi-sub">${statusCounts.ip} dev · ${statusCounts.rv} review</div>
+      <div class="kpi-sub">${inDev} dev · ${inRev} review · ${inRevising} revising</div>
     </div>
   `;
 
@@ -849,9 +852,9 @@ function renderTracker() {
     const dayMods = modules.filter(m => m.d === d);
     const total = dayMods.length;
     const divisor = total || 1; // guard against divide-by-zero in percentages only
-    const counts = {ns:0, ip:0, rv:0, r1:0, r2:0, r3:0, fr:0, cp:0, oh:0, cn:0};
+    const counts = {ns:0, od:0, or:0, ox:0, cd:0, cr:0, cx:0, cp:0, oh:0, cn:0};
     dayMods.forEach(m => counts[getStatus(m)]++);
-    const inFlight = counts.ip + counts.rv + counts.r1 + counts.r2 + counts.r3 + counts.fr;
+    const inFlight = counts.od + counts.or + counts.ox + counts.cd + counts.cr + counts.cx;
     const cpPct = (counts.cp / divisor) * 100;
     const ipRvPct = (inFlight / divisor) * 100;
     let cls = 'pending', pill = 'pending', pillLabel = 'Not Started';
@@ -862,9 +865,9 @@ function renderTracker() {
   });
 
   const totalMods = modules.length;
-  const overallCounts = {ns:0, ip:0, rv:0, r1:0, r2:0, r3:0, fr:0, cp:0, oh:0, cn:0};
+  const overallCounts = {ns:0, od:0, or:0, ox:0, cd:0, cr:0, cx:0, cp:0, oh:0, cn:0};
   modules.forEach(m => overallCounts[getStatus(m)]++);
-  const overallInFlight = overallCounts.ip + overallCounts.rv + overallCounts.r1 + overallCounts.r2 + overallCounts.r3 + overallCounts.fr;
+  const overallInFlight = overallCounts.od + overallCounts.or + overallCounts.ox + overallCounts.cd + overallCounts.cr + overallCounts.cx;
   const overallCpPct = totalMods ? (overallCounts.cp / totalMods) * 100 : 0;
   const overallIpRvPct = totalMods ? (overallInFlight / totalMods) * 100 : 0;
   const overallProgressPct = Math.round(overallCpPct + overallIpRvPct);
@@ -923,9 +926,9 @@ function renderTracker() {
     });
     if (stageMods.length === 0) return '';
     const total = stageMods.length;
-    const sCounts = {ns:0, ip:0, rv:0, r1:0, r2:0, r3:0, fr:0, cp:0, oh:0, cn:0};
+    const sCounts = {ns:0, od:0, or:0, ox:0, cd:0, cr:0, cx:0, cp:0, oh:0, cn:0};
     stageMods.forEach(m => sCounts[getStatus(m)]++);
-    const sInFlight = sCounts.ip + sCounts.rv + sCounts.r1 + sCounts.r2 + sCounts.r3 + sCounts.fr;
+    const sInFlight = sCounts.od + sCounts.or + sCounts.ox + sCounts.cd + sCounts.cr + sCounts.cx;
     const sCpPct = (sCounts.cp / total) * 100;
     const sIpPct = (sInFlight / total) * 100;
     let sCls = 'pending', sPill = 'pending', sPillLabel = 'Not Started';
@@ -1194,7 +1197,7 @@ function renderTracker() {
         <div class="route-metric">
           <div class="route-metric-label">In Progress</div>
           <div class="route-metric-value ip">${overallInFlight}</div>
-          <div class="route-metric-sub">${overallCounts.ip} dev · ${overallCounts.rv} review · ${overallCounts.r1 + overallCounts.r2 + overallCounts.r3} revising · ${overallCounts.fr} final</div>
+          <div class="route-metric-sub">${overallCounts.od + overallCounts.cd} dev · ${overallCounts.or + overallCounts.cr} review · ${overallCounts.ox + overallCounts.cx} revising</div>
         </div>
         <div class="route-metric">
           <div class="route-metric-label">Not Started</div>
