@@ -1059,9 +1059,9 @@ function renderTracker() {
         </div>
       `;
     }
-    const finalTag = isFinal ? '<span class="hr-final-tag">FINAL · LAST CHANCE</span>' : '';
+    const finalTag = isContentReview ? '<span class="hr-final-tag">CONTENT · LAST STAGE</span>' : '';
     return `
-      <div class="handoff-row ${cls} ${isFinal ? 'final' : ''}" onclick="goToModule('${m.id}', ${m.d})" title="Jump to ${esc(m.n)}">
+      <div class="handoff-row ${cls} ${isContentReview ? 'final' : ''}" onclick="goToModule('${m.id}', ${m.d})" title="Jump to ${esc(m.n)}">
         <div class="hr-icon">${icon}</div>
         <div class="hr-main">
           <div class="hr-day-badge">Day ${m.d}</div>
