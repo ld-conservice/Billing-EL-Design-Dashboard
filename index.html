@@ -235,6 +235,11 @@
         <label>Notes</label>
         <textarea id="f-notes"></textarea>
       </div>
+      <div class="form-field full" id="statusHistoryWrap">
+        <label>Status History</label>
+        <div id="statusHistoryList" style="max-height:180px;overflow-y:auto;padding:4px;background:#fafbfc;border-radius:4px;border:1px solid #e5e7eb;"></div>
+        <div class="form-help" style="font-size:10.5px;color:var(--navy-mid);margin-top:3px;">Auto-logged on every status change. Click × to remove an entry added in error.</div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn danger" id="modalDeleteBtn" onclick="deleteModule()" style="display:none;">Delete</button>
@@ -489,6 +494,44 @@ function statusPillClickable(m) {
   const s = getStatus(m);
   return `<span class="status-pill ${s} clickable" title="Click to cycle status" onclick="event.stopPropagation(); cycleStatus('${m.id}')"><span class="dot"></span>${statusLabel(s)}</span>`;
 }
+// ===== STATUS HISTORY =====
+// Appends an entry to the module's status history. Called on every status
+// change (manual cycle, modal save, auto-flip). Skips consecutive duplicates
+// so re-saving without changing status doesn't spam the log.
+function logStatus(id, st) {
+  overlays.edits[id] = overlays.edits[id] || {};
+  const hist = overlays.edits[id].statusHistory = overlays.edits[id].statusHistory || [];
+  if (hist.length && hist[hist.length - 1].st === st) return;
+  const t = new Date();
+  const iso = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
+  hist.push({st, date: iso});
+}
+function renderStatusHistory(m) {
+  const hist = (m && m.statusHistory) || [];
+  if (!hist.length) {
+    return '<div style="font-size:12px;color:var(--navy-mid);font-style:italic;">No status changes logged yet.</div>';
+  }
+  return hist.map((h, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#f5f6fa;border-radius:4px;margin-bottom:4px;">
+      <span class="status-pill ${h.st}" style="font-size:11px;"><span class="dot"></span>${statusLabel(h.st)}</span>
+      <span style="font-size:12px;color:var(--navy-mid);">${fmtDate(h.date)}</span>
+      <div style="flex:1;"></div>
+      <button type="button" class="btn" style="padding:2px 8px;font-size:11px;" onclick="deleteHistoryEntry(${i})" title="Delete this entry">×</button>
+    </div>
+  `).join('');
+}
+function deleteHistoryEntry(idx) {
+  if (!editingId) return;
+  const e = overlays.edits[editingId];
+  if (!e || !e.statusHistory) return;
+  e.statusHistory.splice(idx, 1);
+  saveOverlays();
+  rebuildModules();
+  const m = modules.find(x => x.id === editingId);
+  document.getElementById('statusHistoryList').innerHTML = renderStatusHistory(m);
+  showToast('History entry deleted');
+}
+
 function cycleStatus(id) {
   // Linear flow: Not Started → In Development → In Review → Revisions 1 →
   // Revisions 2 → Revisions 3 → Final Review → Complete → (loop). oh and cn
@@ -500,6 +543,7 @@ function cycleStatus(id) {
   const next = cycle[cur] || 'ns';
   overlays.edits[id] = overlays.edits[id] || {};
   overlays.edits[id].st = next;
+  logStatus(id, next);
   // Keep revLevel in sync when manually moving into a revision status so the
   // auto-flip system knows which round we're on next time.
   if (next === 'r1') overlays.edits[id].revLevel = Math.max(1, m.revLevel || 0);
@@ -560,6 +604,7 @@ function runAutoFlip() {
     overlays.edits[m.id] = overlays.edits[m.id] || {};
     overlays.edits[m.id].st = nextStatus;
     overlays.edits[m.id].revLevel = nextLevel;
+    logStatus(m.id, nextStatus);
     // Stamp the flip so we can show "returned" recency badge.
     overlays.edits[m.id].returnedAt = todayStart.getFullYear() + '-' +
       String(todayStart.getMonth()+1).padStart(2,'0') + '-' +
@@ -1742,6 +1787,7 @@ function openAddModal() {
   document.getElementById('f-a2').value = '';
   document.getElementById('f-a3').value = '';
   document.getElementById('f-notes').value = '';
+  document.getElementById('statusHistoryWrap').style.display = 'none';
   const mb = document.getElementById('modalBackdrop');
   mb.classList.add('show');
   mb.scrollTop = 0;
@@ -1771,6 +1817,8 @@ function openEditModal(id) {
   document.getElementById('f-a2').value = m.a2 || '';
   document.getElementById('f-a3').value = m.a3 || '';
   document.getElementById('f-notes').value = m.nt || '';
+  document.getElementById('statusHistoryList').innerHTML = renderStatusHistory(m);
+  document.getElementById('statusHistoryWrap').style.display = '';
   const mbE = document.getElementById('modalBackdrop');
   mbE.classList.add('show');
   mbE.scrollTop = 0;
@@ -1803,16 +1851,19 @@ function saveModule() {
   if (!data.n) { showToast('Please enter a module name'); return; }
   if (editingId) {
     const m = modules.find(x => x.id === editingId);
+    const prevStatus = m ? getStatus(m) : null;
     if (m && m._base) {
       overlays.edits[editingId] = Object.assign({}, overlays.edits[editingId] || {}, data);
     } else {
       const idx = overlays.added.findIndex(x => x.id === editingId);
       if (idx >= 0) overlays.added[idx] = Object.assign({}, overlays.added[idx], data);
     }
+    if (data.st && data.st !== prevStatus) logStatus(editingId, data.st);
     showToast('Saved');
   } else {
     const id = newId();
     overlays.added.push(Object.assign({id}, data));
+    if (data.st) logStatus(id, data.st);
     showToast('Added');
   }
   saveOverlays();
