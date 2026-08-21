@@ -1885,6 +1885,25 @@ function exportJSON() {
     const currentTab = document.querySelector('.tab.active');
     if (currentTab) showView(currentTab.dataset.view, {fromHash: true});
   }
+  // Re-run auto-flip every 15 minutes while the tab is open so items flip
+  // as soon as their review window closes, even without a page reload.
+  setInterval(() => {
+    const flipped = runAutoFlip();
+    if (flipped > 0) {
+      const currentTab = document.querySelector('.tab.active');
+      if (currentTab) showView(currentTab.dataset.view, {fromHash: true});
+    }
+  }, 15 * 60 * 1000);
+  // Also run when the tab regains focus (covers overnight/weekend gaps
+  // where the interval fired but the machine was asleep).
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const flipped = runAutoFlip();
+    if (flipped > 0) {
+      const currentTab = document.querySelector('.tab.active');
+      if (currentTab) showView(currentTab.dataset.view, {fromHash: true});
+    }
+  });
 })();
 </script>
 </body>
